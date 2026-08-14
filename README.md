@@ -103,11 +103,33 @@ Update the values inside `.env` according to your environment.
 
 ---
 
-## 4. Start PostgreSQL
+## 4. Install & Start PostgreSQL
+
+Install PostgreSQL locally if you haven't already:
+
+**macOS (Homebrew)**
+```bash
+brew install postgresql@16
+brew services start postgresql@16
+```
+
+**Windows**
+Download and run the installer from [postgresql.org/download/windows](https://www.postgresql.org/download/windows/), then ensure the PostgreSQL service is running (it starts automatically after install).
+
+**Linux (Debian/Ubuntu)**
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+Then create the database:
 
 ```bash
-docker compose up -d
+psql -U postgres -c "CREATE DATABASE template_db;"
 ```
+
+Make sure the credentials and port in `.env` match your local PostgreSQL setup (default port is `5432`).
 
 ---
 
