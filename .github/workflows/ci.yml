@@ -39,6 +39,22 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+
+      - name: Write .env for Prisma CLI
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >> .env
+          echo "BCRYPT_SALT_ROUNDS=${{ secrets.BCRYPT_SALT_ROUNDS }}" >> .env
+          echo "CLIENT_URL=${{ secrets.CLIENT_URL }}" >> .env
+          echo "GOOGLE_EARTH_ENGINE_CREDENTIALS=${{ secrets.GOOGLE_EARTH_ENGINE_CREDENTIALS }}" >> .env
+          echo "GDELT_API_KEY=${{ secrets.GDELT_API_KEY }}" >> .env
+          echo "LLM_API_KEY=${{ secrets.LLM_API_KEY }}" >> .env
+          echo "ADMIN_SEED_EMAIL=${{ secrets.ADMIN_SEED_EMAIL }}" >> .env
+          echo "ADMIN_SEED_PASSWORD=${{ secrets.ADMIN_SEED_PASSWORD }}" >> .env
+          echo "NODE_ENV=development" >> .env
+          echo "PORT=3000" >> .env
+
       - run: npm run prisma:generate
       - run: npm run prisma:migrate:deploy
       - run: npm run lint
