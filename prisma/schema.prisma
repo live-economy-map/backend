@@ -1,7 +1,206 @@
 generator client {
   provider = "prisma-client-js"
+  // Note: driverAdapters is NO LONGER a preview feature in Prisma 7
+  // Do NOT add previewFeatures = ['driverAdapters'] — it will warn as deprecated
 }
 
 datasource db {
   provider = "postgresql"
+  // No url field here — Prisma 7 reads connection from prisma.config.ts
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum DataSourceKey {
+  VIIRS
+  GHSL
+  RWI
+  GDELT
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum EvidenceTier {
+  OFFICIAL
+  MARKET_REPORT
+  INFRASTRUCTURE
+  LOCAL_NEWS
+}
+
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+
+/// Single project/data-team login. No public user accounts in V1 — no `role`
+/// field, since only one admin type exists (see Doc 4 design decisions).
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // bcrypt hash — never returned in API responses
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pipelineRuns       PipelineRun[]       @relation("PipelineRunTriggeredBy")
+  scoreWeightConfigs ScoreWeightConfig[] @relation("ScoreWeightConfigCreatedBy")
+  caseStudies        CaseStudy[]         @relation("CaseStudyCreatedBy")
+}
+
+/// One of the four external data sources feeding the system. Exactly four
+/// rows exist at launch (seeded) — GDELT is stored here for pipeline/health
+/// tracking, but is never referenced by ScoreWeightConfig/SourceWeight.
+model DataSource {
+  id          String        @id @default(uuid())
+  key         DataSourceKey @unique
+  name        String
+  description String
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  signalValues  SignalValue[]
+  pipelineRuns  PipelineRun[]
+  sourceWeights SourceWeight[]
+
+  @@index([isActive])
+}
+
+/// A single attempted data pull/refresh for one data source. Health status
+/// (FR-19/FR-20) is derived from these rows at query time — never stored
+/// redundantly on DataSource.
+model PipelineRun {
+  id                String     @id @default(uuid())
+  dataSourceId      String
+  dataSource        DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Restrict)
+  triggeredById     String
+  triggeredBy       Admin      @relation("PipelineRunTriggeredBy", fields: [triggeredById], references: [id])
+  status            RunStatus  @default(RUNNING)
+  startedAt         DateTime   @default(now())
+  completedAt       DateTime?
+  recordsProcessed  Int?
+  errorMessage      String?
+
+  // Supports "most recent run per source" lookups for FR-19/FR-20.
+  @@index([dataSourceId, startedAt])
+}
+
+/// A single spatial cell in the fixed Addis Ababa grid. Grid is generated
+/// once, at a single resolution matched to RWI's ~2.4km native resolution
+/// (exact meters value finalized during pipeline implementation — see Doc 4).
+model GridCell {
+  id               String   @id @default(uuid())
+  cellRow          Int
+  cellCol          Int
+  centroidLat      Float
+  centroidLng      Float
+  boundaryGeoJson  Json // Plain JSON polygon — no PostGIS in V1 (see Doc 4)
+  areaLabel        String?
+  createdAt        DateTime @default(now())
+
+  signalValues             SignalValue[]
+  compositeScoreSnapshots  CompositeScoreSnapshot[]
+  caseStudies              CaseStudy[]
+
+  @@unique([cellRow, cellCol])
+}
+
+/// A single data source's raw + normalized value for one grid cell in one
+/// time period. For VIIRS/GHSL/RWI these feed CompositeScoreSnapshot; GDELT
+/// rows here (if stored) are reference-only, per Doc 4.
+model SignalValue {
+  id               String     @id @default(uuid())
+  gridCellId       String
+  gridCell         GridCell   @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  dataSourceId     String
+  dataSource       DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Restrict)
+  period           DateTime
+  rawValue         Float
+  normalizedValue  Float
+  createdAt        DateTime   @default(now())
+
+  @@unique([gridCellId, dataSourceId, period])
+  // Time-slider (FR-02) queries by period across many cells.
+  @@index([period])
+}
+
+/// A versioned container for per-source weights used to compute the
+/// composite score. Only one config should be active at a time — enforced
+/// at the application layer (atomic transaction on create/activate).
+model ScoreWeightConfig {
+  id          String   @id @default(uuid())
+  createdById String
+  createdBy   Admin    @relation("ScoreWeightConfigCreatedBy", fields: [createdById], references: [id])
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sourceWeights            SourceWeight[]
+  compositeScoreSnapshots  CompositeScoreSnapshot[]
+
+  @@index([isActive])
+}
+
+/// One data source's weight within a specific ScoreWeightConfig. Join table
+/// (not fixed columns) so a new data source can be added later without a
+/// migration. GDELT never gets a row here — excluded from the composite
+/// score formula (see Doc 4).
+model SourceWeight {
+  id                   String            @id @default(uuid())
+  scoreWeightConfigId  String
+  scoreWeightConfig    ScoreWeightConfig @relation(fields: [scoreWeightConfigId], references: [id], onDelete: Cascade)
+  dataSourceId         String
+  dataSource           DataSource        @relation(fields: [dataSourceId], references: [id], onDelete: Restrict)
+  weight               Float
+
+  @@unique([scoreWeightConfigId, dataSourceId])
+}
+
+/// The computed composite growth score for one grid cell in one time
+/// period, tied to the weight config used to produce it. Never overwritten
+/// in place — each period's score is its own row (supports the FR-02
+/// time-slider showing genuine historical change).
+model CompositeScoreSnapshot {
+  id                   String            @id @default(uuid())
+  gridCellId           String
+  gridCell             GridCell          @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  period               DateTime
+  scoreWeightConfigId  String
+  scoreWeightConfig    ScoreWeightConfig @relation(fields: [scoreWeightConfigId], references: [id], onDelete: Restrict)
+  compositeScore       Float
+  isComplete           Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+
+  @@unique([gridCellId, period, scoreWeightConfigId])
+  // Same time-slider access pattern as SignalValue(period).
+  @@index([period])
+}
+
+/// An admin-curated, independently verified known-growth location shown on
+/// the public map. isPublished defaults to false — case studies are a
+/// factual claim requiring deliberate admin action to go live.
+model CaseStudy {
+  id                  String        @id @default(uuid())
+  gridCellId          String?
+  gridCell            GridCell?     @relation(fields: [gridCellId], references: [id], onDelete: SetNull)
+  name                String
+  latitude            Float
+  longitude           Float
+  evidenceDescription String
+  evidenceUrl         String?
+  evidenceTier        EvidenceTier?
+  scoreRiseDate       DateTime
+  confirmedDate       DateTime
+  beforeImageUrl      String?
+  afterImageUrl       String?
+  isPublished         Boolean       @default(false)
+  createdById         String
+  createdBy           Admin         @relation("CaseStudyCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([isPublished])
 }
