@@ -11,3 +11,6 @@ export const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
   TOO_MANY_REQUESTS: 429,
 } as const;
+
+export const MAP_SEARCH_LOW_CONFIDENCE_MESSAGE =
+  "Couldn't understand that query — try rephrasing, e.g. 'areas near Bole with rising construction'";
