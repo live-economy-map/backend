@@ -56,7 +56,7 @@ jobs:
           echo "PORT=3000" >> .env
 
       - run: npm run prisma:generate
-      - run: npm run prisma:migrate:deploy
+      - run: npm run prisma:migrate
       - run: npm run lint
       - run: npm run build
       - run: npm test
