@@ -14,3 +14,5 @@ export const HTTP_STATUS = {
 
 export const MAP_SEARCH_LOW_CONFIDENCE_MESSAGE =
   "Couldn't understand that query — try rephrasing, e.g. 'areas near Bole with rising construction'";
+
+export const STALENESS_THRESHOLD_DAYS = 45;
