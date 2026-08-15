@@ -6,16 +6,57 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-      JWT_SECRET: ci-test-secret-not-for-production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+      BCRYPT_SALT_ROUNDS: ${{ secrets.BCRYPT_SALT_ROUNDS }}
+      CLIENT_URL: ${{ secrets.CLIENT_URL }}
+      GOOGLE_EARTH_ENGINE_CREDENTIALS: ${{ secrets.GOOGLE_EARTH_ENGINE_CREDENTIALS }}
+      GDELT_API_KEY: ${{ secrets.GDELT_API_KEY }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      ADMIN_SEED_EMAIL: ${{ secrets.ADMIN_SEED_EMAIL }}
+      ADMIN_SEED_PASSWORD: ${{ secrets.ADMIN_SEED_PASSWORD }}
+      NODE_ENV: development
+      PORT: 3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
+
+      - name: Write .env for Prisma CLI
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >> .env
+          echo "BCRYPT_SALT_ROUNDS=${{ secrets.BCRYPT_SALT_ROUNDS }}" >> .env
+          echo "CLIENT_URL=${{ secrets.CLIENT_URL }}" >> .env
+          echo "GOOGLE_EARTH_ENGINE_CREDENTIALS=${{ secrets.GOOGLE_EARTH_ENGINE_CREDENTIALS }}" >> .env
+          echo "GDELT_API_KEY=${{ secrets.GDELT_API_KEY }}" >> .env
+          echo "LLM_API_KEY=${{ secrets.LLM_API_KEY }}" >> .env
+          echo "ADMIN_SEED_EMAIL=${{ secrets.ADMIN_SEED_EMAIL }}" >> .env
+          echo "ADMIN_SEED_PASSWORD=${{ secrets.ADMIN_SEED_PASSWORD }}" >> .env
+          echo "NODE_ENV=development" >> .env
+          echo "PORT=3000" >> .env
+
       - run: npm run prisma:generate
+      - run: npm run prisma:migrate
       - run: npm run lint
       - run: npm run build
       - run: npm test
