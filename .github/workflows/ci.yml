@@ -6,9 +6,33 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       JWT_SECRET: ci-test-secret-not-for-production
+      JWT_EXPIRES_IN: 7d
+      BCRYPT_SALT_ROUNDS: 10
+      CLIENT_URL: http://localhost:3000
+      GOOGLE_EARTH_ENGINE_CREDENTIALS: ci-placeholder-credentials
+      GDELT_API_KEY: ci-placeholder-key
+      LLM_API_KEY: ci-placeholder-key
+      ADMIN_SEED_EMAIL: admin@example.com
+      ADMIN_SEED_PASSWORD: ci-placeholder-password-123
+      NODE_ENV: development
+      PORT: 3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,6 +40,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run prisma:generate
+      - run: npm run prisma:migrate:deploy
       - run: npm run lint
       - run: npm run build
       - run: npm test
