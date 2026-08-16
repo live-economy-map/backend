@@ -34,7 +34,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('map.routes', () => {
+describe('map.routes', () => {
   it('GET / has no auth requirement', async () => {
     const res = await request(buildApp()).get('/map');
     expect(res.status).toBe(200);

@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('map.service', () => {
+describe('map.service', () => {
   describe('getCompositeScoreLayer', () => {
     it('returns cells for the requested period when data exists (step 1 of the two-step query hits)', async () => {
       (prisma.compositeScoreSnapshot.findMany as any).mockResolvedValueOnce([
