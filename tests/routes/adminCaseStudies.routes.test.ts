@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import type { Request, Response, NextFunction } from 'express';
 
 vi.mock('../../src/services/adminCaseStudies.service.js', () => ({
   getAllCaseStudies: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('../../src/services/adminCaseStudies.service.js', () => ({
 // Bearer-style Authorization header, req.user attached otherwise) without depending
 // on real JWT verification.
 vi.mock('../../src/middlewares/auth.middleware.js', () => ({
-  default: (req, res, next) => {
+  default: (req: Request, res: Response, next: NextFunction) => {
     if (!req.headers.authorization) {
       return res.status(401).json({
         statusCode: 401,
@@ -24,7 +25,7 @@ vi.mock('../../src/middlewares/auth.middleware.js', () => ({
         errors: [],
       });
     }
-    req.user = { id: 'admin-1', role: 'admin' };
+    (req as any).user = { id: 'admin-1', role: 'admin' };
     next();
   },
 }));
@@ -53,7 +54,7 @@ const validBody = {
 const validUuid = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
 
 describe.skip('adminCaseStudies.routes', () => {
-  let app;
+  let app: express.Express;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,7 +121,7 @@ describe.skip('adminCaseStudies.routes', () => {
 
   describe('DELETE /:caseStudyId has no body schema', () => {
     it('reaches the controller mock even with a malformed id — service is responsible for the 404', async () => {
-      adminCaseStudiesService.deleteCaseStudy.mockResolvedValue(undefined);
+      (adminCaseStudiesService.deleteCaseStudy as any).mockResolvedValue(undefined);
 
       const res = await request(app)
         .delete('/admin/case-studies/some-malformed-id')
@@ -145,7 +146,7 @@ describe.skip('adminCaseStudies.routes', () => {
 
   describe('happy paths — authorized, valid input reaches the controller', () => {
     it('GET / returns 200', async () => {
-      adminCaseStudiesService.getAllCaseStudies.mockResolvedValue({
+      (adminCaseStudiesService.getAllCaseStudies as any).mockResolvedValue({
         items: [],
         page: 1,
         limit: 20,
@@ -160,7 +161,7 @@ describe.skip('adminCaseStudies.routes', () => {
     });
 
     it('POST / returns 201 with a valid body', async () => {
-      adminCaseStudiesService.createCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.createCaseStudy as any).mockResolvedValue({
         caseStudy: { id: '1', ...validBody },
         dateOrderWarning: false,
       });
@@ -174,7 +175,7 @@ describe.skip('adminCaseStudies.routes', () => {
     });
 
     it('PATCH /:caseStudyId returns 200 with a valid uuid and body', async () => {
-      adminCaseStudiesService.updateCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.updateCaseStudy as any).mockResolvedValue({
         caseStudy: { id: validUuid },
         dateOrderWarning: false,
       });
@@ -188,7 +189,7 @@ describe.skip('adminCaseStudies.routes', () => {
     });
 
     it('DELETE /:caseStudyId returns 200 with a valid uuid', async () => {
-      adminCaseStudiesService.deleteCaseStudy.mockResolvedValue(undefined);
+      (adminCaseStudiesService.deleteCaseStudy as any).mockResolvedValue(undefined);
 
       const res = await request(app)
         .delete(`/admin/case-studies/${validUuid}`)
@@ -198,7 +199,9 @@ describe.skip('adminCaseStudies.routes', () => {
     });
 
     it('POST /discover returns 200 with a valid areaFocus', async () => {
-      adminCaseStudiesService.searchCaseStudyCandidates.mockResolvedValue({ candidates: [] });
+      (adminCaseStudiesService.searchCaseStudyCandidates as any).mockResolvedValue({
+        candidates: [],
+      });
 
       const res = await request(app)
         .post('/admin/case-studies/discover')

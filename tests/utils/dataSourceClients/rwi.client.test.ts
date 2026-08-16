@@ -18,16 +18,22 @@ describe.skip('rwi.client', () => {
     await expect(pull(boundingBox, period)).rejects.toThrow();
   });
 
-  it('handles a malformed/incomplete dataset entry distinguishably from an empty result', async () => {
-    // mock the local read to resolve an unexpected shape
-  });
+  it.todo(
+    'handles a malformed/incomplete dataset entry distinguishably from an empty result — ' +
+      "OPEN ITEM: blocked on Doc 8-6's undecided static-read mechanism (file read vs. pre-imported " +
+      'lookup table, "confirm during implementation"). Once rwi.client.ts\'s real read mechanism is ' +
+      'implemented, mock it to resolve an unexpected shape and assert the result either ' +
+      'rejects.toThrow() or resolves a value distinguishable from [].',
+  );
 
   it('resolves [] for an empty bounding box / no data in range', async () => {
     const result = await pull(boundingBox, period);
     expect(result).toEqual([]);
   });
 
-  it('makes no network/HTTP/SDK call — reads only the static dataset', async () => {
-    // assert no fetch/SDK mock was invoked
-  });
+  it.todo(
+    'makes no network/HTTP/SDK call — reads only the static dataset — ' +
+      'OPEN ITEM: same undecided read-mechanism blocker as the malformed-entry case above; ' +
+      'write this once the concrete read mechanism (and therefore what to assert was NOT called) is decided.',
+  );
 });

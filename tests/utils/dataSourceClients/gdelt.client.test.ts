@@ -21,7 +21,12 @@ describe.skip('gdelt.client', () => {
   });
 
   it('handles a malformed/incomplete provider response distinguishably from an empty result', async () => {
-    // mock fetch to resolve an unexpected shape
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ unexpectedShape: true }),
+    } as unknown as Response);
+
+    await expect(pull(boundingBox, period)).rejects.toThrow();
   });
 
   it('resolves [] for an empty bounding box / no data in range', async () => {

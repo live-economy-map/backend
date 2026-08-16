@@ -1,14 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as caseStudiesService from '../../src/services/caseStudies.service.js';
 import ApiError from '../../src/utils/ApiError.js';
 import { HTTP_STATUS } from '../../src/constants/index.js';
-import { prisma } from '../../src/config/db.js';
 import type { CaseStudySummaryDTO, CaseStudyDetailDTO } from '../../src/types/index.js';
 
-// Don't use vi.mock() — manually set up spies instead
-vi.spyOn(prisma.caseStudy, 'findMany');
-vi.spyOn(prisma.caseStudy, 'findUnique');
-vi.spyOn(prisma.caseStudy, 'count');
+vi.mock('../../src/config/db.js', () => ({
+  prisma: {
+    caseStudy: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      count: vi.fn(),
+    },
+  },
+}));
+
+import * as caseStudiesService from '../../src/services/caseStudies.service.js';
+import { prisma } from '../../src/config/db.js';
 
 describe.skip('caseStudies.service', () => {
   beforeEach(() => {
