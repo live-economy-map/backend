@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { envSchema } from '../../src/config/env.js';
 
-describe.skip('env schema validation', () => {
+describe('env schema validation', () => {
   const validEnv = {
     NODE_ENV: 'test' as const,
     PORT: '3000',
