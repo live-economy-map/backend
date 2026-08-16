@@ -20,7 +20,7 @@ const validCreateBody = {
 
 const validUuid = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
 
-describe.skip('adminCaseStudies.schema', () => {
+describe('adminCaseStudies.schema', () => {
   describe('createCaseStudySchema', () => {
     it('requires name, coordinates, evidenceDescription, and both dates', () => {
       const result = createCaseStudySchema.safeParse({ body: {} });
