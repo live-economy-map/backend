@@ -22,10 +22,13 @@ describe.skip('viirs.client', () => {
     await expect(pull(boundingBox, period)).rejects.toThrow();
   });
 
-  it('handles a malformed/incomplete provider response distinguishably from an empty result', async () => {
-    // mock the Earth Engine SDK call to resolve an unexpected shape
-    // either throws, or resolves something distinguishable from []
-  });
+  it.todo(
+    'handles a malformed/incomplete provider response distinguishably from an empty result — ' +
+      'OPEN ITEM: blocked on Doc 8-6\'s undecided Earth Engine call shape ("confirm against the ' +
+      'actual template scaffold/SDK during implementation"). Once viirs.client.ts\'s real EE call ' +
+      'is implemented, mock that specific call to resolve an unexpected shape and assert the result ' +
+      'either rejects.toThrow() or resolves a value distinguishable from [].',
+  );
 
   it('resolves [] for an empty bounding box / no data in range', async () => {
     // mock the Earth Engine SDK call to resolve genuinely empty data

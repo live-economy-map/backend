@@ -95,27 +95,18 @@ describe.skip('adminPipeline.schema', () => {
       expect(result.success).toBe(true);
     });
 
-    // Decided (no longer pending): weights must sum to 1.0, with float tolerance.
-    it('rejects weights that do not sum to 1.0', () => {
+    // Sum-to-1.0 is a service-layer business-rule check, not a schema concern — see
+    // adminPipelineService.createAndActivateWeightConfig / adminPipeline.service.test.ts.
+    // Doc 8-6 (function-level spec) is explicit that the schema does NOT enforce this, and
+    // that whether the 400 is thrown at all is itself pending confirmation. This schema
+    // deliberately accepts weights that don't sum to 1.0 — that's not a gap, it's the contract.
+    it("accepts a valid 3-source set even when weights do not sum to 1.0 — sum validation is not this schema's job", () => {
       const result = createWeightConfigSchema.safeParse({
         body: {
           weights: [
             { sourceKey: 'VIIRS', weight: 0.4 },
             { sourceKey: 'GHSL', weight: 0.3 },
             { sourceKey: 'RWI', weight: 0.2 },
-          ],
-        },
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it('accepts weights within float tolerance of 1.0 (e.g. 0.9999996)', () => {
-      const result = createWeightConfigSchema.safeParse({
-        body: {
-          weights: [
-            { sourceKey: 'VIIRS', weight: 0.3333332 },
-            { sourceKey: 'GHSL', weight: 0.3333332 },
-            { sourceKey: 'RWI', weight: 0.3333332 },
           ],
         },
       });

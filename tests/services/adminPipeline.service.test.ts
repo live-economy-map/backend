@@ -366,6 +366,11 @@ describe.skip('adminPipeline.service', () => {
       ).rejects.toThrow();
     });
 
+    // OPEN ITEM (Doc 8-6, createAndActivateWeightConfig): sum-to-1.0 enforcement here is
+    // "pending confirmation" per Doc 8-6 / Doc 4's open item — this test reflects the currently
+    // documented direction, not a finalized decision. If Doc 4 changes the formula/tolerance,
+    // update this test and its neighbor below together; this is the sole owner of this rule
+    // (see adminPipeline.schema.test.ts, which intentionally does not test sum-to-1.0).
     it('throws 400 when weights do not sum to 1.0', async () => {
       await expect(
         createAndActivateWeightConfig(

@@ -48,13 +48,12 @@ describe.skip('env schema validation', () => {
     expect(result.success).toBe(false);
   });
 
-  it('fails when GDELT_API_KEY is missing', () => {
-    const incomplete = { ...validEnv };
-    (incomplete as Partial<typeof validEnv>).GDELT_API_KEY = undefined;
-
-    const result = envSchema.safeParse(incomplete);
-    expect(result.success).toBe(false);
-  });
+  // OPEN ITEM (Doc 9-1, 9.2): GDELT_API_KEY's required-ness is explicitly "pending
+  // confirmation" — some GDELT endpoints are keyless. Doc 9-1 says not to guess this in the
+  // test suite. Whoever implements gdelt.client.ts (Doc 8-6) settles this first; then either
+  // merge this case into the fail-fast tests above (if a key is required) or assert
+  // `result.success` is `true` with `GDELT_API_KEY` omitted (if the chosen endpoint is keyless).
+  it.todo('GDELT_API_KEY requirement — pending confirmation, see Doc 9-1 section 9.2 and Doc 8-6');
 
   it('fails when ADMIN_SEED_EMAIL is missing', () => {
     const incomplete = { ...validEnv };

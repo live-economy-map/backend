@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import type { Request, Response } from 'express';
 
 vi.mock('../../src/controllers/map.controller.js', () => ({
-  getCells: vi.fn((req, res) =>
+  getCells: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
-  getCellDetail: vi.fn((req, res) =>
+  getCellDetail: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
-  getRawLayer: vi.fn((req, res) =>
+  getRawLayer: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
-  searchMap: vi.fn((req, res) =>
+  searchMap: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
 }));

@@ -47,7 +47,7 @@ describe.skip('caseStudies.controller', () => {
         total: 1,
       };
 
-      mockReq.body = { page: 1, limit: 20 };
+      mockReq.query = { page: '1', limit: '20' };
       vi.mocked(caseStudiesService.getPublishedCaseStudies).mockResolvedValue(mockResult);
 
       await caseStudiesController.listCaseStudies(
@@ -68,7 +68,7 @@ describe.skip('caseStudies.controller', () => {
     });
 
     it('should return 200 with SuccessResponse', async () => {
-      mockReq.body = { page: 1, limit: 20 };
+      mockReq.query = { page: '1', limit: '20' };
       vi.mocked(caseStudiesService.getPublishedCaseStudies).mockResolvedValue({
         items: [],
         page: 1,
@@ -115,15 +115,20 @@ describe.skip('caseStudies.controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(HTTP_STATUS.OK);
     });
 
-    it('should propagate 404 error unchanged from service', async () => {
+    it('should propagate 404 error unchanged via next, controller call resolves normally', async () => {
       mockReq.params = { caseStudyId: 'nonexistent' };
       const notFoundError = new ApiError(HTTP_STATUS.NOT_FOUND, 'Case study not found');
 
       vi.mocked(caseStudiesService.getPublishedCaseStudyById).mockRejectedValue(notFoundError);
 
-      await expect(
-        caseStudiesController.getCaseStudyById(mockReq as Request, mockRes as Response, mockNext),
-      ).rejects.toThrow(notFoundError);
+      await caseStudiesController.getCaseStudyById(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext,
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(notFoundError);
+      expect(mockRes.json).not.toHaveBeenCalled();
     });
 
     it('should return 200 with SuccessResponse on success', async () => {

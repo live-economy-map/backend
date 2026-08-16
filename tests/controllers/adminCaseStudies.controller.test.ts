@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Request, Response } from 'express';
 import { HTTP_STATUS } from '../../src/constants/index.js';
 import ApiError from '../../src/utils/ApiError.js';
 
@@ -19,8 +20,8 @@ import {
   discoverCandidates,
 } from '../../src/controllers/adminCaseStudies.controller.js';
 
-function mockRes() {
-  const res = {};
+function mockRes(): Response {
+  const res: any = {};
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn().mockReturnValue(res);
   return res;
@@ -36,11 +37,11 @@ describe.skip('adminCaseStudies.controller', () => {
       const req = {
         query: { isPublished: 'false', page: '1', limit: '20' },
         user: { id: 'admin-1' },
-      };
+      } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
       const serviceResult = { items: [], page: 1, limit: 20, total: 0 };
-      adminCaseStudiesService.getAllCaseStudies.mockResolvedValue(serviceResult);
+      (adminCaseStudiesService.getAllCaseStudies as any).mockResolvedValue(serviceResult);
 
       await listAllCaseStudies(req, res, next);
 
@@ -58,17 +59,20 @@ describe.skip('adminCaseStudies.controller', () => {
 
   describe('createCaseStudy', () => {
     it('responds 201 with "Case study created" when there is no date-order warning', async () => {
-      const req = { body: { name: 'Bole' }, user: { id: 'admin-1' } };
+      const req = { body: { name: 'Bole' }, user: { id: 'admin-1' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.createCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.createCaseStudy as any).mockResolvedValue({
         caseStudy: { id: '1' },
         dateOrderWarning: false,
       });
 
       await createCaseStudy(req, res, next);
 
-      expect(adminCaseStudiesService.createCaseStudy).toHaveBeenCalledWith(req.body, req.user.id);
+      expect(adminCaseStudiesService.createCaseStudy).toHaveBeenCalledWith(
+        req.body,
+        (req as any).user.id,
+      );
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.CREATED);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ statusCode: 201, message: 'Case study created' }),
@@ -76,10 +80,10 @@ describe.skip('adminCaseStudies.controller', () => {
     });
 
     it('responds 201 with the date-order-warning message when dateOrderWarning is true', async () => {
-      const req = { body: { name: 'Bole' }, user: { id: 'admin-1' } };
+      const req = { body: { name: 'Bole' }, user: { id: 'admin-1' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.createCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.createCaseStudy as any).mockResolvedValue({
         caseStudy: { id: '1' },
         dateOrderWarning: true,
       });
@@ -87,16 +91,16 @@ describe.skip('adminCaseStudies.controller', () => {
       await createCaseStudy(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.CREATED);
-      const jsonArg = res.json.mock.calls[0][0];
+      const jsonArg = (res.json as any).mock.calls[0][0];
       expect(jsonArg.message).toMatch(/scoreRiseDate is after confirmedDate/i);
     });
 
     it('propagates a 404 grid-cell-not-found error via next, unchanged', async () => {
-      const req = { body: { gridCellId: 'bad-id' }, user: { id: 'admin-1' } };
+      const req = { body: { gridCellId: 'bad-id' }, user: { id: 'admin-1' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
       const error = new ApiError(HTTP_STATUS.NOT_FOUND, 'Grid cell not found');
-      adminCaseStudiesService.createCaseStudy.mockRejectedValue(error);
+      (adminCaseStudiesService.createCaseStudy as any).mockRejectedValue(error);
 
       await createCaseStudy(req, res, next);
 
@@ -111,10 +115,10 @@ describe.skip('adminCaseStudies.controller', () => {
         params: { caseStudyId: '1' },
         body: { evidenceUrl: 'https://x.com' },
         user: { id: 'admin-1' },
-      };
+      } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.updateCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.updateCaseStudy as any).mockResolvedValue({
         caseStudy: { id: '1' },
         dateOrderWarning: true,
       });
@@ -126,7 +130,7 @@ describe.skip('adminCaseStudies.controller', () => {
         req.body,
       );
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.OK);
-      const jsonArg = res.json.mock.calls[0][0];
+      const jsonArg = (res.json as any).mock.calls[0][0];
       expect(jsonArg.message).toMatch(/scoreRiseDate is after confirmedDate/i);
     });
 
@@ -135,26 +139,30 @@ describe.skip('adminCaseStudies.controller', () => {
         params: { caseStudyId: '1' },
         body: { evidenceUrl: 'https://x.com' },
         user: { id: 'admin-1' },
-      };
+      } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.updateCaseStudy.mockResolvedValue({
+      (adminCaseStudiesService.updateCaseStudy as any).mockResolvedValue({
         caseStudy: { id: '1' },
         dateOrderWarning: false,
       });
 
       await updateCaseStudy(req, res, next);
 
-      const jsonArg = res.json.mock.calls[0][0];
+      const jsonArg = (res.json as any).mock.calls[0][0];
       expect(jsonArg.message).not.toMatch(/scoreRiseDate is after confirmedDate/i);
     });
 
     it('propagates a 404 case-study-not-found error via next, unchanged', async () => {
-      const req = { params: { caseStudyId: 'bad-id' }, body: {}, user: { id: 'admin-1' } };
+      const req = {
+        params: { caseStudyId: 'bad-id' },
+        body: {},
+        user: { id: 'admin-1' },
+      } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
       const error = new ApiError(HTTP_STATUS.NOT_FOUND, 'Case study not found');
-      adminCaseStudiesService.updateCaseStudy.mockRejectedValue(error);
+      (adminCaseStudiesService.updateCaseStudy as any).mockRejectedValue(error);
 
       await updateCaseStudy(req, res, next);
 
@@ -164,10 +172,10 @@ describe.skip('adminCaseStudies.controller', () => {
 
   describe('deleteCaseStudy', () => {
     it('delegates to deleteCaseStudy and responds 200 with an empty data payload', async () => {
-      const req = { params: { caseStudyId: '1' } };
+      const req = { params: { caseStudyId: '1' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.deleteCaseStudy.mockResolvedValue(undefined);
+      (adminCaseStudiesService.deleteCaseStudy as any).mockResolvedValue(undefined);
 
       await deleteCaseStudy(req, res, next);
 
@@ -181,10 +189,10 @@ describe.skip('adminCaseStudies.controller', () => {
 
   describe('discoverCandidates', () => {
     it('responds 200 with message "OK" when candidates are found', async () => {
-      const req = { body: { areaFocus: 'Ayat' } };
+      const req = { body: { areaFocus: 'Ayat' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.searchCaseStudyCandidates.mockResolvedValue({
+      (adminCaseStudiesService.searchCaseStudyCandidates as any).mockResolvedValue({
         candidates: [
           {
             summary: 'x',
@@ -201,32 +209,34 @@ describe.skip('adminCaseStudies.controller', () => {
         req.body.areaFocus,
       );
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.OK);
-      const jsonArg = res.json.mock.calls[0][0];
+      const jsonArg = (res.json as any).mock.calls[0][0];
       expect(jsonArg.message).toBe('OK');
     });
 
     it('responds 200 (not an error status) with "No relevant candidates found" when candidates is empty', async () => {
-      const req = { body: { areaFocus: 'Nowhere' } };
+      const req = { body: { areaFocus: 'Nowhere' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
-      adminCaseStudiesService.searchCaseStudyCandidates.mockResolvedValue({ candidates: [] });
+      (adminCaseStudiesService.searchCaseStudyCandidates as any).mockResolvedValue({
+        candidates: [],
+      });
 
       await discoverCandidates(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.OK);
-      const jsonArg = res.json.mock.calls[0][0];
+      const jsonArg = (res.json as any).mock.calls[0][0];
       expect(jsonArg.message).toBe('No relevant candidates found');
     });
 
     it('propagates the 400 discovery-unavailable error via next, unchanged', async () => {
-      const req = { body: { areaFocus: 'Ayat' } };
+      const req = { body: { areaFocus: 'Ayat' } } as unknown as Request;
       const res = mockRes();
       const next = vi.fn();
       const error = new ApiError(
         HTTP_STATUS.BAD_REQUEST,
         'Discovery search is temporarily unavailable',
       );
-      adminCaseStudiesService.searchCaseStudyCandidates.mockRejectedValue(error);
+      (adminCaseStudiesService.searchCaseStudyCandidates as any).mockRejectedValue(error);
 
       await discoverCandidates(req, res, next);
 
