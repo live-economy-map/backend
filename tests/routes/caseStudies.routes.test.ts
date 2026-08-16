@@ -14,10 +14,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('caseStudies.routes', () => {
+describe('caseStudies.routes', () => {
   it('GET / has no auth requirement, delegates to listCaseStudies', async () => {
-    vi.mocked(caseStudiesController.listCaseStudies).mockImplementation((req: any, res: any) =>
-      res.status(200).json({}),
+    vi.mocked(caseStudiesController.listCaseStudies).mockImplementation(
+      async (req: any, res: any) => res.status(200).json({}),
     );
 
     const res = await request(app).get('/case-studies');
@@ -27,8 +27,8 @@ describe.skip('caseStudies.routes', () => {
   });
 
   it('GET / validates query params against listCaseStudiesQuerySchema — rejects an out-of-range limit', async () => {
-    vi.mocked(caseStudiesController.listCaseStudies).mockImplementation((req: any, res: any) =>
-      res.status(200).json({}),
+    vi.mocked(caseStudiesController.listCaseStudies).mockImplementation(
+      async (req: any, res: any) => res.status(200).json({}),
     );
 
     const res = await request(app).get('/case-studies').query({ limit: 101 });
@@ -38,8 +38,8 @@ describe.skip('caseStudies.routes', () => {
   });
 
   it('GET /:caseStudyId has no auth requirement, delegates to getCaseStudyById', async () => {
-    vi.mocked(caseStudiesController.getCaseStudyById).mockImplementation((req: any, res: any) =>
-      res.status(200).json({}),
+    vi.mocked(caseStudiesController.getCaseStudyById).mockImplementation(
+      async (req: any, res: any) => res.status(200).json({}),
     );
 
     const res = await request(app).get('/case-studies/cs-1');
@@ -49,8 +49,8 @@ describe.skip('caseStudies.routes', () => {
   });
 
   it("GET /:caseStudyId has no schema on the param — a malformed id still reaches the controller mock (404 is the service/Prisma layer's job)", async () => {
-    vi.mocked(caseStudiesController.getCaseStudyById).mockImplementation((req: any, res: any) =>
-      res.status(200).json({}),
+    vi.mocked(caseStudiesController.getCaseStudyById).mockImplementation(
+      async (req: any, res: any) => res.status(200).json({}),
     );
 
     const res = await request(app).get('/case-studies/not-a-real-id');

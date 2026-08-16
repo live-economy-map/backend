@@ -7,7 +7,7 @@ import { HTTP_STATUS } from '../../src/constants/index.js';
 
 vi.mock('../../src/services/caseStudies.service.js');
 
-describe.skip('caseStudies.controller', () => {
+describe('caseStudies.controller', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
   let mockNext: NextFunction;
