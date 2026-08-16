@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 export const listCaseStudiesQuerySchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({}).optional(),
   query: z.object({
     page: z.coerce.number().int().positive().optional().default(1),
     limit: z.coerce.number().int().positive().max(100).optional().default(20),
   }),
 });
 
-export type ListCaseStudiesQuery = z.infer<typeof listCaseStudiesQuerySchema>;
+export type ListCaseStudiesQuery = z.infer<typeof listCaseStudiesQuerySchema>['query'];
