@@ -10,6 +10,7 @@ export const envSchema = z.object({
   JWT_SECRET: z.string(),
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.string().default('10'),
+  CLIENT_URL: z.string(),
   GOOGLE_EARTH_ENGINE_CREDENTIALS: z.string(),
   GDELT_API_KEY: z.string(),
   LLM_API_KEY: z.string(),
