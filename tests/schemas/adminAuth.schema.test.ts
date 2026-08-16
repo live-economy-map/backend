@@ -3,7 +3,7 @@ import { loginSchema } from '../../src/schemas/adminAuth.schema.js';
 
 // Per 09-test-file-specification/backend/9-5-admin-access.md, section 9.2
 
-describe.skip('adminAuth.schema', () => {
+describe('adminAuth.schema', () => {
   describe('loginSchema', () => {
     it('rejects an invalid email format', () => {
       const result = loginSchema.safeParse({

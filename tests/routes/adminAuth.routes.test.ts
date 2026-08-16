@@ -42,7 +42,7 @@ function buildApp() {
   return app;
 }
 
-describe.skip('adminAuth.routes', () => {
+describe('adminAuth.routes', () => {
   let app: express.Express;
 
   beforeEach(() => {
