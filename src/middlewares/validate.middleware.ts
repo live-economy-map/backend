@@ -4,7 +4,7 @@ import ApiError from '../utils/ApiError.js';
 import { HTTP_STATUS } from '../constants/index.js';
 
 // 🟢 Using a generic parameter <T> so TypeScript tracks the specific schema shape dynamically
-const validate = <T>(schema: ZodSchema<T>) => {
+export const validate = <T>(schema: ZodSchema<T>) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // 🟢 parsedData is now strictly typed to match the schema's shape instead of 'any'
@@ -28,9 +28,7 @@ const validate = <T>(schema: ZodSchema<T>) => {
           return `${path}: ${issue.message}`;
         });
 
-        return next(
-          new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation failed', errorMessages)
-        );
+        return next(new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation failed', errorMessages));
       }
       next(error);
     }
