@@ -11,12 +11,10 @@ export const validate = <T>(schema: ZodSchema<T>) => {
         params: req.params,
         query: req.query,
       });
-
       const data = parsedData as any;
-      if (data.body) req.body = data.body;
+      if (data.body) Object.assign(req.body, data.body);
       if (data.params) Object.assign(req.params, data.params);
       if (data.query) Object.assign(req.query, data.query);
-
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -24,7 +22,6 @@ export const validate = <T>(schema: ZodSchema<T>) => {
           const path = issue.path.join('.');
           return `${path}: ${issue.message}`;
         });
-
         return next(new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation failed', errorMessages));
       }
       next(error);

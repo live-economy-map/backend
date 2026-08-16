@@ -16,7 +16,7 @@ vi.mock('../../src/config/db.js', () => ({
 import * as caseStudiesService from '../../src/services/caseStudies.service.js';
 import { prisma } from '../../src/config/db.js';
 
-describe.skip('caseStudies.service', () => {
+describe('caseStudies.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -141,7 +141,7 @@ describe.skip('caseStudies.service', () => {
 
   describe('getPublishedCaseStudyById', () => {
     it('should return full detail DTO for published case study', async () => {
-      const mockCaseStudy: CaseStudyDetailDTO = {
+      const mockCaseStudy = {
         id: 'cs-1',
         name: 'CMC Growth',
         latitude: 9.03,
@@ -153,6 +153,7 @@ describe.skip('caseStudies.service', () => {
         evidenceTier: 'MARKET_REPORT',
         scoreRiseDate: new Date('2023-01-01'),
         confirmedDate: new Date('2023-02-01'),
+        isPublished: true,
       };
 
       vi.mocked(prisma.caseStudy.findUnique).mockResolvedValueOnce(
@@ -161,7 +162,19 @@ describe.skip('caseStudies.service', () => {
 
       const result = await caseStudiesService.getPublishedCaseStudyById('cs-1');
 
-      expect(result).toEqual(mockCaseStudy);
+      expect(result).toEqual({
+        id: 'cs-1',
+        name: 'CMC Growth',
+        latitude: 9.03,
+        longitude: 38.74,
+        beforeImageUrl: 'http://example.com/before.jpg',
+        afterImageUrl: 'http://example.com/after.jpg',
+        evidenceDescription: 'Rapid construction activity',
+        evidenceUrl: 'http://example.com/evidence',
+        evidenceTier: 'MARKET_REPORT',
+        scoreRiseDate: new Date('2023-01-01'),
+        confirmedDate: new Date('2023-02-01'),
+      });
     });
 
     it('should throw 404 when case study does not exist', async () => {
@@ -198,7 +211,7 @@ describe.skip('caseStudies.service', () => {
     });
 
     it('should return detail with both image URLs as null', async () => {
-      const mockCaseStudy: CaseStudyDetailDTO = {
+      const mockCaseStudy = {
         id: 'cs-2',
         name: 'Study',
         latitude: 9.0,
@@ -210,6 +223,7 @@ describe.skip('caseStudies.service', () => {
         evidenceTier: null,
         scoreRiseDate: new Date('2023-01-01'),
         confirmedDate: new Date('2023-02-01'),
+        isPublished: true, // ← ADDED
       };
 
       vi.mocked(prisma.caseStudy.findUnique).mockResolvedValueOnce(
@@ -223,7 +237,7 @@ describe.skip('caseStudies.service', () => {
     });
 
     it('should return detail with only one image URL present (beforeImageUrl)', async () => {
-      const mockCaseStudy: CaseStudyDetailDTO = {
+      const mockCaseStudy = {
         id: 'cs-3',
         name: 'Study',
         latitude: 9.0,
@@ -235,6 +249,7 @@ describe.skip('caseStudies.service', () => {
         evidenceTier: null,
         scoreRiseDate: new Date('2023-01-01'),
         confirmedDate: new Date('2023-02-01'),
+        isPublished: true, // ← ADDED
       };
 
       vi.mocked(prisma.caseStudy.findUnique).mockResolvedValueOnce(
@@ -248,7 +263,7 @@ describe.skip('caseStudies.service', () => {
     });
 
     it('should return detail with only one image URL present (afterImageUrl)', async () => {
-      const mockCaseStudy: CaseStudyDetailDTO = {
+      const mockCaseStudy = {
         id: 'cs-4',
         name: 'Study',
         latitude: 9.0,
@@ -260,6 +275,7 @@ describe.skip('caseStudies.service', () => {
         evidenceTier: null,
         scoreRiseDate: new Date('2023-01-01'),
         confirmedDate: new Date('2023-02-01'),
+        isPublished: true, // ← ADDED
       };
 
       vi.mocked(prisma.caseStudy.findUnique).mockResolvedValueOnce(
