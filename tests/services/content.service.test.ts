@@ -8,11 +8,13 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('content.service', () => {
+describe('content.service', () => {
   describe('getLandingStats', () => {
     it('resolves highlightStats with a nonzero count and a lastDataRefresh timestamp', async () => {
       (prisma.caseStudy.count as any).mockResolvedValue(3);
-      (prisma.pipelineRun.findFirst as any).mockResolvedValue({ completedAt: new Date('2026-08-01T00:00:00Z') });
+      (prisma.pipelineRun.findFirst as any).mockResolvedValue({
+        completedAt: new Date('2026-08-01T00:00:00Z'),
+      });
 
       const result = await getLandingStats();
 
@@ -45,7 +47,7 @@ describe.skip('content.service', () => {
       await getLandingStats();
 
       expect(prisma.caseStudy.count).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { isPublished: true } })
+        expect.objectContaining({ where: { isPublished: true } }),
       );
     });
 
@@ -56,7 +58,7 @@ describe.skip('content.service', () => {
       await getLandingStats();
 
       expect(prisma.pipelineRun.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ status: 'SUCCESS' }) })
+        expect.objectContaining({ where: expect.objectContaining({ status: 'SUCCESS' }) }),
       );
     });
   });

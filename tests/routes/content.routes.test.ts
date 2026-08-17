@@ -14,10 +14,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('content.routes', () => {
+describe('content.routes', () => {
   it('GET /landing has no auth requirement', async () => {
     (contentController.getLandingContent as any).mockImplementation((req: any, res: any) =>
-      res.status(200).json({})
+      res.status(200).json({}),
     );
 
     const res = await request(app).get('/content/landing');
@@ -28,7 +28,7 @@ describe.skip('content.routes', () => {
 
   it('GET /methodology has no auth requirement', async () => {
     (contentController.getMethodologyContent as any).mockImplementation((req: any, res: any) =>
-      res.status(200).json({})
+      res.status(200).json({}),
     );
 
     const res = await request(app).get('/content/methodology');
@@ -39,10 +39,10 @@ describe.skip('content.routes', () => {
 
   it('neither route rejects arbitrary query params — no validation middleware in the chain', async () => {
     (contentController.getLandingContent as any).mockImplementation((req: any, res: any) =>
-      res.status(200).json({})
+      res.status(200).json({}),
     );
     (contentController.getMethodologyContent as any).mockImplementation((req: any, res: any) =>
-      res.status(200).json({})
+      res.status(200).json({}),
     );
 
     const res1 = await request(app).get('/content/landing').query({ arbitrary: 'value' });
