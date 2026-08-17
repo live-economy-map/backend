@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
 import * as contentService from '../../src/services/content.service.js';
-import { getLandingContent, getMethodologyContent } from '../../src/controllers/content.controller.js';
+import {
+  getLandingContent,
+  getMethodologyContent,
+} from '../../src/controllers/content.controller.js';
 
 vi.mock('../../src/services/content.service.js');
 
@@ -16,7 +19,7 @@ const mockRes = () => {
   return res as Response;
 };
 
-describe.skip('content.controller', () => {
+describe('content.controller', () => {
   describe('getLandingContent', () => {
     it('delegates to getLandingStats with no arguments and responds 200', async () => {
       const result = {
@@ -33,7 +36,7 @@ describe.skip('content.controller', () => {
       expect(contentService.getLandingStats).toHaveBeenCalledWith();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 200, message: 'OK', data: result })
+        expect.objectContaining({ statusCode: 200, message: 'OK', data: result }),
       );
     });
 
@@ -66,7 +69,7 @@ describe.skip('content.controller', () => {
       expect(contentService.getMethodologyContent).toHaveBeenCalledWith();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 200, message: 'OK', data: result })
+        expect.objectContaining({ statusCode: 200, message: 'OK', data: result }),
       );
     });
 
