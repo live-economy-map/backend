@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { listCaseStudiesQuerySchema } from '../../src/schemas/caseStudies.schema.js';
 
-describe.skip('caseStudies.schema', () => {
+describe('caseStudies.schema', () => {
   describe('listCaseStudiesQuerySchema', () => {
     it('should default page to 1 and limit to 20 when omitted', () => {
       const result = listCaseStudiesQuerySchema.safeParse({ query: {} });
