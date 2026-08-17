@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('map.controller', () => {
+describe('map.controller', () => {
   describe('getCells', () => {
     it('delegates to getCompositeScoreLayer and responds 200 with SuccessResponse', async () => {
       const serviceResult = { period: '2026-06-01', periodSubstituted: false, cells: [] };

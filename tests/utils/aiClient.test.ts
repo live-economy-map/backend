@@ -4,7 +4,7 @@ import { z } from 'zod';
 // Mock the LLM client module
 vi.mock('../../src/utils/llmClient.js');
 
-describe.skip('aiClient.ts', () => {
+describe('aiClient.ts', () => {
   let mockCallLLM: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {

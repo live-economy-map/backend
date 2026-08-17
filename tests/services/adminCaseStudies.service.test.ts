@@ -53,7 +53,7 @@ function notFoundError() {
   return Object.assign(new Error('Record to update/delete does not exist.'), { code: 'P2025' });
 }
 
-describe.skip('adminCaseStudies.service', () => {
+describe('adminCaseStudies.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -6,7 +6,7 @@ import {
   searchMapBodySchema,
 } from '../../src/schemas/map.schema.js';
 
-describe.skip('map.schema', () => {
+describe('map.schema', () => {
   describe('getCellsQuerySchema', () => {
     it('accepts a valid ISO date period', () => {
       const result = getCellsQuerySchema.safeParse({ query: { period: '2026-06-01' } });
