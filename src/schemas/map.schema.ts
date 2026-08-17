@@ -29,3 +29,8 @@ export const searchMapBodySchema = z.object({
     query: z.string().min(3).max(200),
   }),
 });
+
+export type GetCellsQuery = z.infer<typeof getCellsQuerySchema>['query'];
+export type GetCellDetailParams = z.infer<typeof getCellDetailParamsSchema>;
+export type GetRawLayerParams = z.infer<typeof getRawLayerParamsSchema>;
+export type SearchMapBody = z.infer<typeof searchMapBodySchema>['body'];
