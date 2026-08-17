@@ -24,7 +24,7 @@ const mockRes = () => {
   return res as Response;
 };
 
-describe.skip('adminPipeline.controller', () => {
+describe('adminPipeline.controller', () => {
   describe('listSources', () => {
     it('delegates to getSourcesWithHealth and responds 200', async () => {
       const sources = [{ key: 'VIIRS' }];

@@ -5,7 +5,7 @@ import {
   createWeightConfigSchema,
 } from '../../src/schemas/adminPipeline.schema.js';
 
-describe.skip('adminPipeline.schema', () => {
+describe('adminPipeline.schema', () => {
   describe('refreshParamsSchema', () => {
     it('accepts all 4 DataSourceKey values, including GDELT', () => {
       const result = refreshParamsSchema.safeParse({ params: { sourceKey: 'GDELT' } });
