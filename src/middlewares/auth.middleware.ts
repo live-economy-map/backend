@@ -13,7 +13,7 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => 
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = verifyToken(token) as { id: string; role: string };
+    const payload = verifyToken(token) as { id: string; email: string; createdAt: Date };
 
     req.user = payload;
     next();

@@ -18,7 +18,7 @@ function mockRes(): Response {
   return res;
 }
 
-describe.skip('adminAuth.controller', () => {
+describe('adminAuth.controller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

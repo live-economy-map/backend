@@ -38,7 +38,7 @@ const validAdminRow = {
   updatedAt: new Date('2026-01-10T00:00:00Z'),
 };
 
-describe.skip('adminAuth.service', () => {
+describe('adminAuth.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
