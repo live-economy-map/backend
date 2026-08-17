@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('adminPipeline.routes', () => {
+describe('adminPipeline.routes', () => {
   it('returns 401 with no Authorization header on every route in this router', async () => {
     const routes = [
       { method: 'get', path: '/admin/pipeline/sources' },

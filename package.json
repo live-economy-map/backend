@@ -20,6 +20,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:grid": "tsx prisma/seedGridCells.ts",
     "prepare": "husky"
   },
   "repository": {
@@ -34,6 +35,7 @@
   },
   "homepage": "https://github.com/aduch123/template-node-express#readme",
   "dependencies": {
+    "@google/earthengine": "^1.7.39",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",

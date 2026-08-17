@@ -22,7 +22,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe.skip('adminPipeline.service', () => {
+describe('adminPipeline.service', () => {
   describe('getSourcesWithHealth', () => {
     it('returns all 4 sources with correct healthStatus derived from each own most recent run', async () => {
       (prisma.dataSource.findMany as any).mockResolvedValue([

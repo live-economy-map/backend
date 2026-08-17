@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import authMiddleware from '../middlewares/auth.middleware.js';
-import validate from '../middlewares/validate.middleware.js';
+import { validate } from '../middlewares/validate.middleware.js';
 import {
   refreshParamsSchema,
   recomputeBodySchema,
@@ -17,6 +17,7 @@ import {
 
 const router = Router();
 
+// authMiddleware applies to every route in this router (per Doc 8-6).
 router.use(authMiddleware);
 
 router.get('/sources', listSources);
