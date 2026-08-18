@@ -10,8 +10,8 @@ import { getCells, getCellDetail, getRawLayer, searchMap } from '../controllers/
 
 const router = Router();
 
-router.get('/', validate(getCellsQuerySchema), getCells);
-router.get('/:cellId', validate(getCellDetailParamsSchema), getCellDetail);
+router.get('/cells', validate(getCellsQuerySchema), getCells);
+router.get('/cells/:cellId', validate(getCellDetailParamsSchema), getCellDetail);
 router.get('/layers/:sourceKey', validate(getRawLayerParamsSchema), getRawLayer);
 router.post('/search', validate(searchMapBodySchema), searchMap);
 

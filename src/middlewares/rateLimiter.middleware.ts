@@ -4,7 +4,7 @@ import { HTTP_STATUS } from '../constants/index.js';
 
 export const defaultLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   // 🟢 Intercept the limitation event and route it through your design system
@@ -15,8 +15,8 @@ export const defaultLimiter = rateLimit({
         new ErrorResponse(
           HTTP_STATUS.TOO_MANY_REQUESTS,
           'Too many requests, please try again later.',
-          []
-        )
+          [],
+        ),
       );
   },
 });
@@ -33,8 +33,8 @@ export const authLimiter = rateLimit({
         new ErrorResponse(
           HTTP_STATUS.TOO_MANY_REQUESTS,
           'Too many login attempts, please try again later.',
-          []
-        )
+          [],
+        ),
       );
   },
 });
