@@ -35,19 +35,19 @@ beforeEach(() => {
 });
 
 describe('map.routes', () => {
-  it('GET / has no auth requirement', async () => {
-    const res = await request(buildApp()).get('/map');
+  it('GET /cells has no auth requirement', async () => {
+    const res = await request(buildApp()).get('/map/cells');
     expect(res.status).toBe(200);
   });
 
-  it('GET / validates period format', async () => {
-    const res = await request(buildApp()).get('/map').query({ period: 'not-a-date' });
+  it('GET /cells validates period format', async () => {
+    const res = await request(buildApp()).get('/map/cells').query({ period: 'not-a-date' });
     expect(res.status).toBe(400);
     expect(mapController.getCells).not.toHaveBeenCalled();
   });
 
-  it('GET /:cellId requires a uuid cellId', async () => {
-    const res = await request(buildApp()).get('/map/not-a-uuid');
+  it('GET /cells/:cellId requires a uuid cellId', async () => {
+    const res = await request(buildApp()).get('/map/cells/not-a-uuid');
     expect(res.status).toBe(400);
     expect(mapController.getCellDetail).not.toHaveBeenCalled();
   });
@@ -80,8 +80,8 @@ describe('map.routes', () => {
   it('no route in this router requires auth', async () => {
     const app = buildApp();
     const responses = await Promise.all([
-      request(app).get('/map'),
-      request(app).get('/map/11111111-1111-1111-1111-111111111111'),
+      request(app).get('/map/cells'),
+      request(app).get('/map/cells/11111111-1111-1111-1111-111111111111'),
       request(app).get('/map/layers/VIIRS'),
       request(app).post('/map/search').send({ query: 'areas near Bole with rising construction' }),
     ]);
