@@ -42,3 +42,11 @@ export const searchMap = asyncHandler(async (req: Request, res: Response, next: 
     next(error);
   }
 });
+
+export const getPeriods = async (req: Request, res: Response, next: NextFunction) => {
+  const result = await mapService.getAvailablePeriods();
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+};

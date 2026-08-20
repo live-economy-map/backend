@@ -1,3 +1,4 @@
+// ./prisma/seedGridCells.ts
 import { prisma } from '../src/config/db.js';
 import { ADDIS_ABABA_BOUNDING_BOX } from '../src/types/dataSourceClient.types.js';
 

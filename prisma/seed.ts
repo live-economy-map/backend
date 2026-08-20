@@ -1,3 +1,4 @@
+// ./prisma/seed.ts
 import bcrypt from 'bcrypt';
 import { DataSourceKey } from '@prisma/client';
 import { prisma } from '../src/config/db.js';
