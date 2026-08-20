@@ -103,11 +103,18 @@ export const updateCaseStudy = async (
     }
   }
 
+  const data: any = { ...input };
+  if (data.scoreRiseDate !== undefined) {
+    data.scoreRiseDate = new Date(data.scoreRiseDate);
+  }
+  if (data.confirmedDate !== undefined) {
+    data.confirmedDate = new Date(data.confirmedDate);
+  }
   let caseStudy: any;
   try {
     caseStudy = await prisma.caseStudy.update({
       where: { id },
-      data: input,
+      data,
     });
   } catch (error: any) {
     if (error?.code === 'P2025') {

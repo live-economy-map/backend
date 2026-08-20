@@ -244,17 +244,22 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
     },
   });
 
-  // 6. Fetch sparkline (last 6 periods)
+  // 6. Fetch sparkline (last 6 periods up to selected date)
   const sparkRows = await prisma.$queryRaw`
-    SELECT 
-      cs."period",
-      cs."compositeScore"
-    FROM "CompositeScoreSnapshot" cs
-    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
-    WHERE cs."gridCellId" = ${cellId}
-    AND sw."isActive" = true
-    ORDER BY cs."period" ASC
-    LIMIT 6;
+    SELECT sub."period", sub."compositeScore"
+    FROM (
+      SELECT 
+        cs."period",
+        cs."compositeScore"
+      FROM "CompositeScoreSnapshot" cs
+      INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+      WHERE cs."gridCellId" = ${cellId}
+      AND DATE(cs."period") <= DATE(${dateString}::timestamp)
+      AND sw."isActive" = true
+      ORDER BY cs."period" DESC
+      LIMIT 6
+    ) sub
+    ORDER BY sub."period" ASC;
   `;
 
   const sparkData = sparkRows as any[];
@@ -409,8 +414,10 @@ export const getAvailablePeriods = async (): Promise<{
   all: string[];
 }> => {
   const rows = await prisma.$queryRaw`
-    SELECT DISTINCT DATE("period") as period
-    FROM "CompositeScoreSnapshot"
+    SELECT DISTINCT DATE(cs."period") as period
+    FROM "CompositeScoreSnapshot" cs
+    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+    WHERE sw."isActive" = true
     ORDER BY period ASC;
   `;
 
