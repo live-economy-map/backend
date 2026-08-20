@@ -5,8 +5,15 @@ import {
   getCellDetailParamsSchema,
   getRawLayerParamsSchema,
   searchMapBodySchema,
+  getPeriodsQuerySchema,
 } from '../schemas/map.schema.js';
-import { getCells, getCellDetail, getRawLayer, searchMap } from '../controllers/map.controller.js';
+import {
+  getCells,
+  getCellDetail,
+  getRawLayer,
+  searchMap,
+  getPeriods,
+} from '../controllers/map.controller.js';
 
 const router = Router();
 
@@ -14,5 +21,7 @@ router.get('/cells', validate(getCellsQuerySchema), getCells);
 router.get('/cells/:cellId', validate(getCellDetailParamsSchema), getCellDetail);
 router.get('/layers/:sourceKey', validate(getRawLayerParamsSchema), getRawLayer);
 router.post('/search', validate(searchMapBodySchema), searchMap);
+router.get('/periods', validate(getPeriodsQuerySchema), getPeriods);
+router.get('/:cellId', validate(getCellDetailParamsSchema), getCellDetail);
 
 export default router;

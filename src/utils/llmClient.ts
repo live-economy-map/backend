@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { env } from '../config/env.js';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.1-8b-instant'; // Groq free-tier model
+const GROQ_MODEL = 'openai/gpt-oss-120b'; // Updated to a valid model
 
 export interface LLMResponse {
   content: string;

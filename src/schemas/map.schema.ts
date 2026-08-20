@@ -30,6 +30,8 @@ export const searchMapBodySchema = z.object({
   }),
 });
 
+export const getPeriodsQuerySchema = z.object({});
+
 export type GetCellsQuery = z.infer<typeof getCellsQuerySchema>['query'];
 export type GetCellDetailParams = z.infer<typeof getCellDetailParamsSchema>;
 export type GetRawLayerParams = z.infer<typeof getRawLayerParamsSchema>;

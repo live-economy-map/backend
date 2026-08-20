@@ -1,3 +1,4 @@
+// src/services/map.service.ts
 import { prisma } from '../config/db.js';
 import { generateText, generateStructuredOutput } from '../utils/aiClient.js';
 import ApiError from '../utils/ApiError.js';
@@ -20,65 +21,105 @@ const parsedFiltersSchema = z
   .nullable();
 
 export const getCompositeScoreLayer = async (period?: string): Promise<CompositeScoreLayerDTO> => {
-  const targetPeriod = period ? new Date(period) : new Date();
-
-  // Step 1: Try exact period
-  let cells = await prisma.compositeScoreSnapshot.findMany({
-    where: {
-      period: targetPeriod,
-      scoreWeightConfig: { isActive: true },
-    },
-    select: {
-      gridCell: {
-        select: { id: true, cellRow: true, cellCol: true, boundaryGeoJson: true },
-      },
-      compositeScore: true,
-      isComplete: true,
-    },
-  });
-
-  let substitutedPeriod = targetPeriod;
-  let periodSubstituted = false;
-
-  // Step 2: Fallback to nearest earlier period if empty
-  if (cells.length === 0) {
-    const fallback = await prisma.compositeScoreSnapshot.findFirst({
-      where: {
-        period: { lt: targetPeriod },
-        scoreWeightConfig: { isActive: true },
-      },
+  // 1. Determine the date string
+  let dateString: string;
+  if (period) {
+    dateString = period;
+  } else {
+    const latest = await prisma.compositeScoreSnapshot.findFirst({
       orderBy: { period: 'desc' },
       select: { period: true },
     });
+    dateString = latest ? latest.period.toISOString().split('T')[0] : '2026-03-01';
+  }
 
-    if (fallback) {
-      substitutedPeriod = fallback.period;
+  // 2. Fetch using the exact same DATE() logic as the detail panel
+  const rows = await prisma.$queryRaw`
+    SELECT 
+      cs."id" as snapshot_id,
+      cs."compositeScore",
+      cs."isComplete",
+      g."id" as grid_cell_id,
+      g."cellRow",
+      g."cellCol",
+      g."boundaryGeoJson"
+    FROM "CompositeScoreSnapshot" cs
+    INNER JOIN "GridCell" g ON g."id" = cs."gridCellId"
+    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+    WHERE DATE(cs."period") = DATE(${dateString}::timestamp)
+    AND sw."isActive" = true;
+  `;
+
+  const data = rows as any[];
+
+  // 3. If no data found, try the fallback
+  let substitutedPeriod = new Date(dateString);
+  let periodSubstituted = false;
+
+  if (data.length === 0) {
+    const fallback = await prisma.$queryRaw`
+      SELECT cs."period"
+      FROM "CompositeScoreSnapshot" cs
+      INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+      WHERE DATE(cs."period") < DATE(${dateString}::timestamp)
+      AND sw."isActive" = true
+      ORDER BY cs."period" DESC
+      LIMIT 1;
+    `;
+    const fallbackData = fallback as any[];
+
+    if (fallbackData.length > 0) {
+      substitutedPeriod = new Date(fallbackData[0].period);
       periodSubstituted = true;
 
-      // Step 3: Re-query with substituted period
-      cells = await prisma.compositeScoreSnapshot.findMany({
-        where: {
-          period: substitutedPeriod,
-          scoreWeightConfig: { isActive: true },
-        },
-        select: {
+      const fallbackRows = await prisma.$queryRaw`
+        SELECT 
+          cs."id" as snapshot_id,
+          cs."compositeScore",
+          cs."isComplete",
+          g."id" as grid_cell_id,
+          g."cellRow",
+          g."cellCol",
+          g."boundaryGeoJson"
+        FROM "CompositeScoreSnapshot" cs
+        INNER JOIN "GridCell" g ON g."id" = cs."gridCellId"
+        INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+        WHERE DATE(cs."period") = DATE(${substitutedPeriod.toISOString().split('T')[0]}::timestamp)
+        AND sw."isActive" = true;
+      `;
+
+      const fallbackDataRows = fallbackRows as any[];
+
+      return {
+        period: substitutedPeriod.toISOString().split('T')[0],
+        periodSubstituted,
+        cells: fallbackDataRows.map((row) => ({
           gridCell: {
-            select: { id: true, cellRow: true, cellCol: true, boundaryGeoJson: true },
+            id: row.grid_cell_id,
+            cellRow: row.cellRow,
+            cellCol: row.cellCol,
+            boundaryGeoJson: row.boundaryGeoJson,
           },
-          compositeScore: true,
-          isComplete: true,
-        },
-      });
+          compositeScore: row.compositeScore,
+          isComplete: row.isComplete,
+        })),
+      };
     }
   }
 
+  // 4. Return the mapped data
   return {
     period: substitutedPeriod.toISOString().split('T')[0],
     periodSubstituted,
-    cells: cells.map((c) => ({
-      gridCell: c.gridCell,
-      compositeScore: c.compositeScore,
-      isComplete: c.isComplete,
+    cells: data.map((row) => ({
+      gridCell: {
+        id: row.grid_cell_id,
+        cellRow: row.cellRow,
+        cellCol: row.cellCol,
+        boundaryGeoJson: row.boundaryGeoJson,
+      },
+      compositeScore: row.compositeScore,
+      isComplete: row.isComplete,
     })),
   };
 };
@@ -93,33 +134,104 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'No data available for this cell');
   }
 
-  // Fetch all snapshots for this cell to get sparkline + trend
-  const snapshots = await prisma.compositeScoreSnapshot.findMany({
-    where: { gridCellId: cellId },
-    select: { period: true, compositeScore: true },
-    orderBy: { period: 'desc' },
-    take: 6,
-  });
+  // 1. Determine the date string
+  let dateString: string;
+  if (period) {
+    dateString = period;
+  } else {
+    const latest = await prisma.compositeScoreSnapshot.findFirst({
+      where: { gridCellId: cellId, scoreWeightConfig: { isActive: true } },
+      orderBy: { period: 'desc' },
+      select: { period: true },
+    });
+    if (!latest) {
+      throw new ApiError(HTTP_STATUS.NOT_FOUND, 'No data available for this cell');
+    }
+    dateString = latest.period.toISOString().split('T')[0];
+  }
 
-  if (snapshots.length === 0) {
+  // 2. Try exact date match first
+  let rows = await prisma.$queryRaw`
+    SELECT 
+      cs."period",
+      cs."compositeScore"
+    FROM "CompositeScoreSnapshot" cs
+    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+    WHERE cs."gridCellId" = ${cellId}
+    AND DATE(cs."period") = DATE(${dateString}::timestamp)
+    AND sw."isActive" = true
+    LIMIT 1;
+  `;
+
+  let data = rows as any[];
+
+  // 3. If no data found, use the same fallback logic as the map
+  let substitutedPeriod = new Date(dateString);
+  let periodSubstituted = false;
+
+  if (data.length === 0) {
+    const fallback = await prisma.$queryRaw`
+      SELECT cs."period"
+      FROM "CompositeScoreSnapshot" cs
+      INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+      WHERE cs."gridCellId" = ${cellId}
+      AND DATE(cs."period") < DATE(${substitutedPeriod.toISOString().split('T')[0]}::timestamp)
+      AND sw."isActive" = true
+      ORDER BY cs."period" DESC
+      LIMIT 1;
+    `;
+    const fallbackData = fallback as any[];
+
+    if (fallbackData.length > 0) {
+      substitutedPeriod = new Date(fallbackData[0].period);
+      periodSubstituted = true;
+
+      rows = await prisma.$queryRaw`
+        SELECT 
+          cs."period",
+          cs."compositeScore"
+        FROM "CompositeScoreSnapshot" cs
+        INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+        WHERE cs."gridCellId" = ${cellId}
+        AND DATE(cs."period") = DATE(${substitutedPeriod.toISOString().split('T')[0]}::timestamp)
+        AND sw."isActive" = true
+        LIMIT 1;
+      `;
+      data = rows as any[];
+    }
+  }
+
+  if (data.length === 0) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'No data available for this cell');
   }
 
-  // Get current period snapshot
-  const currentSnapshot = snapshots[0];
-  const priorSnapshot = snapshots[1];
+  const currentSnapshot = data[0];
 
-  // Compute trend
+  // 4. Fetch previous period for trend
+  const priorRows = await prisma.$queryRaw`
+    SELECT 
+      cs."period",
+      cs."compositeScore"
+    FROM "CompositeScoreSnapshot" cs
+    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+    WHERE cs."gridCellId" = ${cellId}
+    AND DATE(cs."period") < DATE(${dateString}::timestamp)
+    AND sw."isActive" = true
+    ORDER BY cs."period" DESC
+    LIMIT 1;
+  `;
+
+  const priorData = priorRows as any[];
   let trend: 'up' | 'down' | 'flat' = 'flat';
-  if (priorSnapshot) {
-    if (currentSnapshot.compositeScore > priorSnapshot.compositeScore) {
+  if (priorData.length > 0) {
+    if (currentSnapshot.compositeScore > priorData[0].compositeScore) {
       trend = 'up';
-    } else if (currentSnapshot.compositeScore < priorSnapshot.compositeScore) {
+    } else if (currentSnapshot.compositeScore < priorData[0].compositeScore) {
       trend = 'down';
     }
   }
 
-  // Fetch signals for current period
+  // 5. Fetch signals
   const signals = await prisma.signalValue.findMany({
     where: {
       gridCellId: cellId,
@@ -132,7 +244,25 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
     },
   });
 
-  // Generate AI summary
+  // 6. Fetch sparkline (last 6 periods)
+  const sparkRows = await prisma.$queryRaw`
+    SELECT 
+      cs."period",
+      cs."compositeScore"
+    FROM "CompositeScoreSnapshot" cs
+    INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
+    WHERE cs."gridCellId" = ${cellId}
+    AND sw."isActive" = true
+    ORDER BY cs."period" ASC
+    LIMIT 6;
+  `;
+
+  const sparkData = sparkRows as any[];
+  const sparkline = sparkData.map((s) => ({
+    period: s.period.toISOString().split('T')[0],
+    compositeScore: s.compositeScore,
+  }));
+
   const aiSummary = await generateCellSummary(
     signals.map((s) => ({
       source: s.dataSource.key as 'VIIRS' | 'GHSL' | 'RWI' | 'GDELT',
@@ -141,15 +271,6 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
     })),
     currentSnapshot.compositeScore,
   );
-
-  // Build sparkline (oldest -> newest, max 6)
-  const sparkline = snapshots
-    .reverse()
-    .slice(-6)
-    .map((s) => ({
-      period: s.period.toISOString().split('T')[0],
-      compositeScore: s.compositeScore,
-    }));
 
   return {
     cellId,
@@ -185,25 +306,36 @@ export const getRawSignalLayer = async (
   sourceKey: 'VIIRS' | 'GHSL' | 'RWI',
   period?: string,
 ): Promise<RawSignalLayerDTO> => {
-  const targetPeriod = period ? new Date(period) : new Date();
+  // 1. Determine the UTC date string
+  let dateString: string;
+  if (period) {
+    dateString = period; // e.g., '2026-08-01'
+  } else {
+    const latest = await prisma.signalValue.findFirst({
+      where: { dataSource: { key: sourceKey } },
+      orderBy: { period: 'desc' },
+      select: { period: true },
+    });
+    dateString = latest ? latest.period.toISOString().split('T')[0] : '2026-08-01';
+  }
 
-  // Step 1: Try exact period
-  let cells = await prisma.signalValue.findMany({
+  // 2. Convert to a UTC Date object (NO timezone shifting)
+  const targetPeriod = new Date(dateString + 'T00:00:00.000Z');
+
+  let signalValues = await prisma.signalValue.findMany({
     where: {
       period: targetPeriod,
       dataSource: { key: sourceKey },
     },
-    select: {
-      gridCellId: true,
-      normalizedValue: true,
+    include: {
+      gridCell: true,
     },
   });
 
   let substitutedPeriod = targetPeriod;
   let periodSubstituted = false;
 
-  // Step 2: Fallback to nearest earlier
-  if (cells.length === 0) {
+  if (signalValues.length === 0) {
     const fallback = await prisma.signalValue.findFirst({
       where: {
         period: { lt: targetPeriod },
@@ -217,15 +349,13 @@ export const getRawSignalLayer = async (
       substitutedPeriod = fallback.period;
       periodSubstituted = true;
 
-      // Step 3: Re-query
-      cells = await prisma.signalValue.findMany({
+      signalValues = await prisma.signalValue.findMany({
         where: {
           period: substitutedPeriod,
           dataSource: { key: sourceKey },
         },
-        select: {
-          gridCellId: true,
-          normalizedValue: true,
+        include: {
+          gridCell: true,
         },
       });
     }
@@ -235,9 +365,9 @@ export const getRawSignalLayer = async (
     sourceKey,
     period: substitutedPeriod.toISOString().split('T')[0],
     periodSubstituted,
-    cells: cells.map((c) => ({
-      gridCellId: c.gridCellId,
-      normalizedValue: c.normalizedValue,
+    cells: signalValues.map((s) => ({
+      gridCellId: s.gridCell.id,
+      normalizedValue: s.normalizedValue,
     })),
   };
 };
@@ -270,5 +400,29 @@ export const parseNaturalLanguageQuery = async (query: string): Promise<ParsedFi
   return {
     parsedFilters: result,
     cells: snapshots.map((s) => ({ cellId: s.gridCellId, compositeScore: s.compositeScore })),
+  };
+};
+
+export const getAvailablePeriods = async (): Promise<{
+  earliest: string;
+  latest: string;
+  all: string[];
+}> => {
+  const rows = await prisma.$queryRaw`
+    SELECT DISTINCT DATE("period") as period
+    FROM "CompositeScoreSnapshot"
+    ORDER BY period ASC;
+  `;
+
+  const periods = (rows as any[]).map((row) => row.period.toISOString().split('T')[0]);
+
+  if (periods.length === 0) {
+    return { earliest: '', latest: '', all: [] };
+  }
+
+  return {
+    earliest: periods[0],
+    latest: periods[periods.length - 1],
+    all: periods,
   };
 };

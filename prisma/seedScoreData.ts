@@ -9,7 +9,11 @@ function getLastNMonths(n: number): Date[] {
   const now = new Date();
   const months: Date[] = [];
   for (let i = n - 1; i >= 0; i--) {
-    months.push(new Date(Date.UTC(now.getFullYear(), now.getMonth() - i, 1)));
+    // Explicitly create UTC midnight dates (YYYY-MM-DD 00:00:00.000Z)
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() - i;
+    const utcDate = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    months.push(utcDate);
   }
   return months;
 }

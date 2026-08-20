@@ -16,6 +16,10 @@ vi.mock('../../src/controllers/map.controller.js', () => ({
   searchMap: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
+  // ✅ ADDED: getPeriods controller mock
+  getPeriods: vi.fn((req: Request, res: Response) =>
+    res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
+  ),
 }));
 
 import * as mapController from '../../src/controllers/map.controller.js';
@@ -77,6 +81,13 @@ describe('map.routes', () => {
     expect(res.status).toBe(200);
   });
 
+  // ✅ NEW: Test the /periods route
+  it('GET /periods has no auth requirement and returns data', async () => {
+    const res = await request(buildApp()).get('/map/periods');
+    expect(res.status).toBe(200);
+    expect(mapController.getPeriods).toHaveBeenCalled();
+  });
+
   it('no route in this router requires auth', async () => {
     const app = buildApp();
     const responses = await Promise.all([
@@ -84,6 +95,7 @@ describe('map.routes', () => {
       request(app).get('/map/cells/11111111-1111-1111-1111-111111111111'),
       request(app).get('/map/layers/VIIRS'),
       request(app).post('/map/search').send({ query: 'areas near Bole with rising construction' }),
+      request(app).get('/map/periods'), // ✅ Added /periods to the auth test
     ]);
     for (const res of responses) expect(res.status).not.toBe(401);
   });
