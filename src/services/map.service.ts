@@ -175,7 +175,7 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
       FROM "CompositeScoreSnapshot" cs
       INNER JOIN "ScoreWeightConfig" sw ON sw."id" = cs."scoreWeightConfigId"
       WHERE cs."gridCellId" = ${cellId}
-      AND DATE(cs."period") < DATE(${dateString}::timestamp)
+      AND DATE(cs."period") < DATE(${substitutedPeriod.toISOString().split('T')[0]}::timestamp)
       AND sw."isActive" = true
       ORDER BY cs."period" DESC
       LIMIT 1;
