@@ -16,6 +16,36 @@ export interface MethodologyContentDTO {
   limitations: string[];
 }
 
+export interface AboutContentDTO {
+  stats: {
+    countriesMapped: number;
+    primarySourcesCount: number;
+    dataUpdateFrequency: string;
+    dataPointsAnalyzed: string;
+    totalDataPoints: number;
+    gridCellsCount: number;
+    snapshotsCount: number;
+    publishedCaseStudies: number;
+    lastDataRefresh: string | null;
+  };
+  summary: {
+    solutionBullets: string[];
+  };
+}
+
+function formatDataPoints(count: number): string {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M+`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1).replace(/\.0$/, '')}K+`;
+  }
+  if (count > 0) {
+    return `${count}`;
+  }
+  return '0';
+}
+
 export const getLandingStats = async (): Promise<LandingContentDTO> => {
   const publishedCaseStudyCount = await prisma.caseStudy.count({
     where: { isPublished: true },
@@ -58,5 +88,64 @@ export const getMethodologyContent = async (): Promise<MethodologyContentDTO> =>
       'Some inputs (RWI) are coarse resolution (~2.4km)',
       'Map data reflects the last admin-triggered refresh, not real-time',
     ],
+  };
+};
+
+export const getAboutPageContent = async (): Promise<AboutContentDTO> => {
+  const [
+    activeSourcesCount,
+    signalsCount,
+    snapshotsCount,
+    gridCellsCount,
+    publishedCaseStudiesCount,
+    latestRun,
+    latestSnapshot,
+  ] = await Promise.all([
+    prisma.dataSource.count({ where: { isActive: true } }),
+    prisma.signalValue.count(),
+    prisma.compositeScoreSnapshot.count(),
+    prisma.gridCell.count(),
+    prisma.caseStudy.count({ where: { isPublished: true } }),
+    prisma.pipelineRun.findFirst({
+      where: { status: 'SUCCESS' },
+      orderBy: { completedAt: 'desc' },
+      select: { completedAt: true },
+    }),
+    prisma.compositeScoreSnapshot.findFirst({
+      orderBy: { period: 'desc' },
+      select: { period: true, createdAt: true },
+    }),
+  ]);
+
+  const totalDataPoints = signalsCount + snapshotsCount;
+
+  // Determine last data refresh timestamp from pipeline run or latest score snapshot
+  const lastDataRefresh = latestRun?.completedAt
+    ? latestRun.completedAt.toISOString()
+    : latestSnapshot?.period
+      ? latestSnapshot.period.toISOString()
+      : latestSnapshot?.createdAt
+        ? latestSnapshot.createdAt.toISOString()
+        : null;
+
+  return {
+    stats: {
+      countriesMapped: 1,
+      primarySourcesCount: activeSourcesCount > 0 ? activeSourcesCount : 4,
+      dataUpdateFrequency: 'Monthly / On-Demand',
+      dataPointsAnalyzed: formatDataPoints(totalDataPoints),
+      totalDataPoints,
+      gridCellsCount,
+      snapshotsCount,
+      publishedCaseStudies: publishedCaseStudiesCount,
+      lastDataRefresh,
+    },
+    summary: {
+      solutionBullets: [
+        'Objective, satellite-derived metrics.',
+        'Granular resolution down to the city-block level.',
+        'Continuous temporal analysis over years.',
+      ],
+    },
   };
 };
