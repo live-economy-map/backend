@@ -13,3 +13,8 @@ export const getMethodologyContent = asyncHandler(async (req: Request, res: Resp
   const result = await contentService.getMethodologyContent();
   res.status(HTTP_STATUS.OK).json(new SuccessResponse(HTTP_STATUS.OK, 'OK', result));
 });
+
+export const getAboutContent = asyncHandler(async (req: Request, res: Response) => {
+  const result = await contentService.getAboutPageContent();
+  res.status(HTTP_STATUS.OK).json(new SuccessResponse(HTTP_STATUS.OK, 'OK', result));
+});

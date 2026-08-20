@@ -1,8 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '../../src/config/db.js';
-import { getLandingStats, getMethodologyContent } from '../../src/services/content.service.js';
+import {
+  getLandingStats,
+  getMethodologyContent,
+  getAboutPageContent,
+} from '../../src/services/content.service.js';
 
-vi.mock('../../src/config/db.js');
+vi.mock('../../src/config/db.js', () => ({
+  prisma: {
+    caseStudy: {
+      count: vi.fn(),
+    },
+    pipelineRun: {
+      findFirst: vi.fn(),
+    },
+    dataSource: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    signalValue: {
+      count: vi.fn(),
+    },
+    compositeScoreSnapshot: {
+      count: vi.fn(),
+      findFirst: vi.fn(),
+    },
+    gridCell: {
+      count: vi.fn(),
+    },
+  },
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -93,6 +120,64 @@ describe('content.service', () => {
       const result = await getMethodologyContent();
 
       expect(result.dataSources).toEqual([]);
+    });
+  });
+
+  describe('getAboutPageContent', () => {
+    it('resolves about content with dynamic data source count, grid cells, signals, snapshots, and latest pipeline run timestamp', async () => {
+      (prisma.dataSource.count as any).mockResolvedValue(4);
+      (prisma.signalValue.count as any).mockResolvedValue(4284);
+      (prisma.compositeScoreSnapshot.count as any).mockResolvedValue(3570);
+      (prisma.gridCell.count as any).mockResolvedValue(238);
+      (prisma.caseStudy.count as any).mockResolvedValue(1);
+      (prisma.pipelineRun.findFirst as any).mockResolvedValue({
+        completedAt: new Date('2026-08-15T10:00:00Z'),
+      });
+      (prisma.compositeScoreSnapshot.findFirst as any).mockResolvedValue(null);
+
+      const result = await getAboutPageContent();
+
+      expect(result.stats.primarySourcesCount).toBe(4);
+      expect(result.stats.countriesMapped).toBe(1);
+      expect(result.stats.gridCellsCount).toBe(238);
+      expect(result.stats.snapshotsCount).toBe(3570);
+      expect(result.stats.publishedCaseStudies).toBe(1);
+      expect(result.stats.totalDataPoints).toBe(7854);
+      expect(result.stats.dataPointsAnalyzed).toBe('7.9K+');
+      expect(result.stats.dataUpdateFrequency).toBe('Monthly / On-Demand');
+      expect(result.stats.lastDataRefresh).toBe('2026-08-15T10:00:00.000Z');
+      expect(result.summary.solutionBullets).toHaveLength(3);
+      expect(prisma.dataSource.count).toHaveBeenCalledWith({ where: { isActive: true } });
+      expect(prisma.gridCell.count).toHaveBeenCalled();
+      expect(prisma.signalValue.count).toHaveBeenCalled();
+      expect(prisma.compositeScoreSnapshot.count).toHaveBeenCalled();
+      expect(prisma.pipelineRun.findFirst).toHaveBeenCalledWith({
+        where: { status: 'SUCCESS' },
+        orderBy: { completedAt: 'desc' },
+        select: { completedAt: true },
+      });
+    });
+
+    it('falls back gracefully to snapshot timestamp or null when no pipeline run exists', async () => {
+      (prisma.dataSource.count as any).mockResolvedValue(0);
+      (prisma.signalValue.count as any).mockResolvedValue(100);
+      (prisma.compositeScoreSnapshot.count as any).mockResolvedValue(50);
+      (prisma.gridCell.count as any).mockResolvedValue(10);
+      (prisma.caseStudy.count as any).mockResolvedValue(0);
+      (prisma.pipelineRun.findFirst as any).mockResolvedValue(null);
+      (prisma.compositeScoreSnapshot.findFirst as any).mockResolvedValue({
+        period: new Date('2026-08-01T00:00:00Z'),
+        createdAt: new Date('2026-08-01T05:00:00Z'),
+      });
+
+      const result = await getAboutPageContent();
+
+      expect(result.stats.primarySourcesCount).toBe(4);
+      expect(result.stats.countriesMapped).toBe(1);
+      expect(result.stats.totalDataPoints).toBe(150);
+      expect(result.stats.dataPointsAnalyzed).toBe('150');
+      expect(result.stats.lastDataRefresh).toBe('2026-08-01T00:00:00.000Z');
+      expect(result.summary.solutionBullets.length).toBeGreaterThan(0);
     });
   });
 });
