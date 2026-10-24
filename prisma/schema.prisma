@@ -33,6 +33,30 @@ enum EvidenceTier {
   LOCAL_NEWS
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum RequestStatus {
+  SUBMITTED
+  IN_REVIEW
+  IN_PROGRESS
+  DELIVERED
+  REJECTED
+}
+
+enum ContactPreference {
+  EMAIL
+  PHONE
+  TELEGRAM
+}
+
 // ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
@@ -105,6 +129,7 @@ model GridCell {
   signalValues             SignalValue[]
   compositeScoreSnapshots  CompositeScoreSnapshot[]
   caseStudies              CaseStudy[]
+  savedAreas               SavedArea[]
 
   @@unique([cellRow, cellCol])
 }
@@ -204,3 +229,111 @@ model CaseStudy {
 
   @@index([isPublished])
 }
+
+// ─────────────────────────────────────────────
+// V2 Models — Identity & Requests
+// ─────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String    // bcrypt hash
+  role             Role      @default(USER)
+  fullName         String?
+  organizationName String?
+  isEmailVerified  Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  emailTokens            EmailToken[]
+  savedAreas             SavedArea[]
+  reportRequests         ReportRequest[]       @relation("UserReportRequests")
+  assignedReportRequests ReportRequest[]       @relation("AdminAssignedRequests")
+  requestEvents          ReportRequestEvent[]  @relation("ActorRequestEvents")
+  uploadedDeliverables   ReportDeliverable[]   @relation("AdminUploadedDeliverables")
+
+  @@index([role])
+  @@index([isEmailVerified])
+}
+
+model EmailToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  type      TokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tokenHash, type])
+}
+
+model SavedArea {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gridCellId  String
+  gridCell    GridCell @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  customName  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, gridCellId])
+  @@index([userId])
+}
+
+model ReportRequest {
+  id                String            @id @default(uuid())
+  userId            String
+  user              User              @relation("UserReportRequests", fields: [userId], references: [id], onDelete: Restrict)
+  title             String
+  questionPrompt    String
+  areaCellIds       Json              // Array of GridCell UUID strings
+  orgType           String?           // e.g. "Research", "Commercial", "Government", "NGO"
+  contactPreference ContactPreference @default(EMAIL)
+  status            RequestStatus     @default(SUBMITTED)
+  priority          Boolean           @default(false)
+  assignedAdminId   String?
+  assignedAdmin     User?             @relation("AdminAssignedRequests", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  internalNotes     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  events       ReportRequestEvent[]
+  deliverables ReportDeliverable[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedAdminId])
+}
+
+model ReportRequestEvent {
+  id             String         @id @default(uuid())
+  requestId      String
+  request        ReportRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actorId        String
+  actor          User           @relation("ActorRequestEvents", fields: [actorId], references: [id], onDelete: Restrict)
+  previousStatus RequestStatus?
+  newStatus      RequestStatus
+  note           String?
+  createdAt      DateTime       @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model ReportDeliverable {
+  id            String        @id @default(uuid())
+  requestId     String
+  request       ReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl       String
+  fileName      String
+  fileSizeBytes Int
+  mimeType      String
+  uploadedById  String
+  uploadedBy    User          @relation("AdminUploadedDeliverables", fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt     DateTime      @default(now())
+
+  @@index([requestId])
+}
