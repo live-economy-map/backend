@@ -103,4 +103,25 @@ describe('apiPlatform.service', () => {
       expect(res.history[0].score).toBe(75.2);
     });
   });
+
+  describe('getUsageSummary', () => {
+    it('returns aggregated call counts and key details for a user', async () => {
+      vi.mocked(prisma.apiKey.findMany).mockResolvedValueOnce([
+        {
+          id: 'k-1',
+          name: 'App 1',
+          keyPrefix: 'lem_live_123',
+          tier: 'COMMERCIAL',
+          rateLimitRpm: 60,
+          isActive: true,
+        },
+      ] as any);
+      vi.mocked(prisma.apiUsage.count).mockResolvedValueOnce(42);
+
+      const res = await apiPlatformService.getUsageSummary('user-1');
+      expect(res.totalKeys).toBe(1);
+      expect(res.totalCalls).toBe(42);
+      expect(res.keys[0].name).toBe('App 1');
+    });
+  });
 });

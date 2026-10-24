@@ -10,6 +10,7 @@ router.use(authMiddleware);
 
 router.post('/', validate(createApiKeySchema), controller.createApiKey);
 router.get('/', controller.listApiKeys);
+router.get('/usage', controller.getUsageSummary);
 router.delete('/:id', validate(revokeApiKeySchema), controller.revokeApiKey);
 
 export default router;

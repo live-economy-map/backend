@@ -56,3 +56,10 @@ export const getPublicHistory = asyncHandler(async (req: Request, res: Response)
       ),
     );
 });
+
+export const getUsageSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await apiPlatformService.getUsageSummary(req.user!.id);
+  res
+    .status(HTTP_STATUS.OK)
+    .json(new SuccessResponse(HTTP_STATUS.OK, 'API usage summary retrieved successfully', result));
+});

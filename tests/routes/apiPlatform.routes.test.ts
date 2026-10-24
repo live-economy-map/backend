@@ -8,6 +8,7 @@ vi.mock('../../src/services/apiPlatform.service.js', () => ({
     createApiKey: vi.fn(),
     listApiKeys: vi.fn(),
     revokeApiKey: vi.fn(),
+    getUsageSummary: vi.fn(),
     getPublicCells: vi.fn(),
     getPublicScores: vi.fn(),
     getPublicHistory: vi.fn(),
@@ -104,6 +105,21 @@ describe('apiPlatform.routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
+    });
+
+    it('returns API key usage metrics', async () => {
+      vi.mocked(apiPlatformService.getUsageSummary).mockResolvedValueOnce({
+        totalKeys: 1,
+        totalCalls: 15,
+        keys: [],
+      } as any);
+
+      const res = await request(buildApp())
+        .get('/api-keys/usage')
+        .set('Authorization', 'Bearer user-token');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalCalls).toBe(15);
     });
   });
 

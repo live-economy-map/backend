@@ -11,6 +11,8 @@ import savedAreasRoutes from './savedAreas.routes.js';
 import reportRequestsRoutes from './reportRequests.routes.js';
 import alertsRoutes from './alerts.routes.js';
 import notificationsRoutes from './notifications.routes.js';
+import apiKeysRoutes from './apiKeys.routes.js';
+import * as apiPlatformController from '../controllers/apiPlatform.controller.js';
 
 const router = Router();
 
@@ -19,6 +21,7 @@ router.use(authMiddleware);
 router.get('/', authController.getMe);
 router.patch('/', validate(updateProfileSchema), authController.patchMe);
 router.get('/subscription', billingController.getMySubscription);
+router.get('/usage', apiPlatformController.getUsageSummary);
 router.get(
   '/export',
   requireEntitlement('canExport'),
@@ -29,5 +32,6 @@ router.use('/saved-areas', savedAreasRoutes);
 router.use('/report-requests', reportRequestsRoutes);
 router.use('/alerts', alertsRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/api-keys', apiKeysRoutes);
 
 export default router;

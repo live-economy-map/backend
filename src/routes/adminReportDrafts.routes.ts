@@ -19,8 +19,12 @@ router.post(
   validate(generateDraftSchema),
   controller.generateDraft,
 );
+router.post('/report-requests/:id/draft', validate(generateDraftSchema), controller.generateDraft);
 router.get('/report-drafts/:id', validate(getDraftParamsSchema), controller.getDraft);
+router.get('/drafts/:id', validate(getDraftParamsSchema), controller.getDraft);
 router.patch('/report-drafts/:id', validate(updateDraftSchema), controller.updateDraft);
+router.patch('/drafts/:id', validate(updateDraftSchema), controller.updateDraft);
 router.post('/report-drafts/:id/deliver', validate(deliverDraftSchema), controller.deliverDraft);
+router.post('/drafts/:id/deliver', validate(deliverDraftSchema), controller.deliverDraft);
 
 export default router;

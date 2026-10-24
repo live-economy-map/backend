@@ -17,6 +17,15 @@ import publicApiRoutes from './publicApi.routes.js';
 import organizationsRoutes from './organizations.routes.js';
 import watchlistsRoutes from './watchlists.routes.js';
 
+import { requireApiKey } from '../middlewares/apiKey.middleware.js';
+import validate from '../middlewares/validate.middleware.js';
+import {
+  publicCellsQuerySchema,
+  publicScoresQuerySchema,
+  publicHistorySchema,
+} from '../schemas/apiPlatform.schema.js';
+import * as apiPlatformController from '../controllers/apiPlatform.controller.js';
+
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -25,6 +34,27 @@ router.use('/plans', plansRoutes);
 router.use('/billing', billingRoutes);
 router.use('/api-keys', apiKeysRoutes);
 router.use('/public', publicApiRoutes);
+
+// Direct aliases for public read endpoints
+router.get(
+  '/cells',
+  requireApiKey,
+  validate(publicCellsQuerySchema),
+  apiPlatformController.getPublicCells,
+);
+router.get(
+  '/scores',
+  requireApiKey,
+  validate(publicScoresQuerySchema),
+  apiPlatformController.getPublicScores,
+);
+router.get(
+  '/history/:cellId',
+  requireApiKey,
+  validate(publicHistorySchema),
+  apiPlatformController.getPublicHistory,
+);
+
 router.use('/orgs', organizationsRoutes);
 router.use('/watchlists', watchlistsRoutes);
 router.use('/map', mapRoutes);
@@ -34,6 +64,7 @@ router.use('/admin/auth', adminAuthRoutes);
 router.use('/admin/pipeline', adminPipelineRoutes);
 router.use('/admin/case-studies', adminCaseStudiesRoutes);
 router.use('/admin/billing', adminBillingRoutes);
+router.use('/admin', adminBillingRoutes);
 router.use('/admin', adminReportRequestsRoutes);
 router.use('/admin', adminReportDraftsRoutes);
 

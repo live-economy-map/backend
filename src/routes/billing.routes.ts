@@ -19,6 +19,7 @@ router.get(
   billingController.verifyPayment,
 );
 router.post('/webhook', billingController.handleWebhook);
+router.post('/webhook/chapa', billingController.handleWebhook);
 router.get('/me', authMiddleware, billingController.getMySubscription);
 
 export default router;

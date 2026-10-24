@@ -247,6 +247,41 @@ export class ApiPlatformService {
       })),
     };
   }
+
+  /**
+   * Get metered usage summary for a user's API keys.
+   */
+  async getUsageSummary(userId: string) {
+    const keys = await prisma.apiKey.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        name: true,
+        keyPrefix: true,
+        tier: true,
+        rateLimitRpm: true,
+        isActive: true,
+      },
+    });
+
+    const keyIds = keys.map((k) => k.id);
+    const totalCalls = await prisma.apiUsage.count({
+      where: { apiKeyId: { in: keyIds } },
+    });
+
+    return {
+      totalKeys: keys.length,
+      totalCalls,
+      keys: keys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        keyPrefix: k.keyPrefix,
+        tier: k.tier,
+        rateLimitRpm: k.rateLimitRpm,
+        isActive: k.isActive,
+      })),
+    };
+  }
 }
 
 export const apiPlatformService = new ApiPlatformService();
