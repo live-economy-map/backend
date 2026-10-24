@@ -313,17 +313,18 @@ export const generateCellSummary = async (
       .map((s) => `- ${s.source}: raw=${s.rawValue}, normalized=${s.normalizedValue}`)
       .join('\n');
 
-    const prompt = `You are a seasoned regional economic intelligence advisor.
-Provide a humanized, insightful 2-sentence economic review for ${locationName}.
+    const prompt = `You are a trusted local market analyst and commercial real estate strategist.
+Provide a humanized, market-focused 2-sentence economic review for ${locationName}.
 
 Composite Score: ${compositeScore} (${trendText})
 Observed Signals & Telemetry:
 ${signalsDetail}
 
-Instructions:
-1. Speak in a natural, fluent, and confident human tone (do not robotically list raw values).
-2. Synthesize what these activity indicators mean for local commerce, foot traffic, or urban development in 2 concise sentences.
-3. Keep the entire response under 45 words.`;
+Market Guidelines:
+1. Speak like an experienced local business advisor giving advice to an entrepreneur or investor.
+2. Focus purely on the REAL-WORLD MARKET: customer base, foot traffic intensity, consumer purchasing power, evening vs daytime commerce, and commercial viability.
+3. NEVER cite raw decimal numbers, sensor acronyms (like VIIRS, GHSL, RWI, GDELT), or technical formula codes in your output.
+4. Keep the entire response engaging, natural, and strictly under 45 words across 2 punchy sentences.`;
 
     const summary = await generateText(prompt);
     return summary ? summary.trim() : null;
@@ -479,32 +480,30 @@ export const chatWithCell = async (
     .map((s) => `${s.period}: ${s.compositeScore}`)
     .join(', ');
 
-  // 2. Build system prompt grounded in empirical spatial telemetry
-  const systemPrompt = `You are the Spatial Economics AI Assistant for Live Economy Map.
-The user is inspecting a specific geographic sector on the live map and asking questions about it.
+  // 2. Build system prompt grounded in empirical spatial telemetry and market intelligence
+  const systemPrompt = `You are a trusted local commercial market analyst and business intelligence advisor for Live Economy Map.
+You are helping an entrepreneur, investor, or resident evaluate the real-world market and commercial potential of ${locationName}.
 
-GROUND TRUTH DATA FOR THIS SECTOR:
-- Location / Area Label: ${locationName}
-- Current Composite Economic Score: ${cellDetail.compositeScore} / 100 (Scale 0-100, where 100 is peak economic vitality)
-- Recent Trend Momentum: ${cellDetail.trend.toUpperCase()} (Upward expansion, downward cooling, or flat equilibrium)
-- Historical Scores (6 months): ${sparklineSummary}
+GROUND TRUTH DATA & MARKET CHARACTERISTICS:
+- Location: ${locationName}
+- Overall Market Vitality Score: ${cellDetail.compositeScore} / 100 (${cellDetail.trend === 'up' ? 'growing momentum with rising commercial demand' : cellDetail.trend === 'down' ? 'cooling down / price-sensitive consolidation' : 'steady, mature commercial equilibrium'})
+- Historical Trajectory (past 6 months): ${sparklineSummary}
 
-DETAILED MULTI-SOURCE TELEMETRY SIGNALS:
-1. VIIRS (Nighttime Lights): Normalized=${viirs?.normalizedValue ?? 0}, Raw=${viirs?.rawValue ?? 0}
-   -> Measures nocturnal commercial vitality, active evening trade, nightlife, and electrification.
-2. GHSL (Global Human Settlement Layer): Normalized=${ghsl?.normalizedValue ?? 0}, Raw=${ghsl?.rawValue ?? 0}
-   -> Measures physical urbanization, building volume, population density, and built infrastructure.
-3. RWI (Relative Wealth Index): Normalized=${rwi?.normalizedValue ?? 0}, Raw=${rwi?.rawValue ?? 0}
-   -> Measures micro-estimate of household asset wealth and consumer purchasing power.
-4. GDELT (Global Database of Events, Language, and Tone): Normalized=${gdelt?.normalizedValue ?? 0}, Raw=${gdelt?.rawValue ?? 0}
-   -> Measures public media sentiment and local economic/infrastructure event coverage.
+UNDERLYING MARKET FORCES:
+1. Nighttime Activity & Evening Economy (VIIRS: ${viirs?.normalizedValue ?? 0}, Raw: ${viirs?.rawValue ?? 0}):
+   - Market Meaning: ${Number(viirs?.normalizedValue ?? 0) > 0.6 ? 'Vibrant nightlife, late dining, evening retail, and high post-work foot traffic.' : Number(viirs?.normalizedValue ?? 0) > 0.3 ? 'Moderate evening trade; quiet residential environment after 9 PM.' : 'Daytime-only foot traffic; minimal evening commercial activity.'}
+2. Customer Density & Built Environment (GHSL: ${ghsl?.normalizedValue ?? 0}, Raw: ${ghsl?.rawValue ?? 0}):
+   - Market Meaning: ${Number(ghsl?.normalizedValue ?? 0) > 0.6 ? 'Dense urban fabric with heavy pedestrian volume and high street-front visibility.' : Number(ghsl?.normalizedValue ?? 0) > 0.3 ? 'Developing corridor with moderate residential density and growing storefronts.' : 'Sparse outer fringe or industrial zone with limited casual foot traffic.'}
+3. Consumer Purchasing Power & Demographics (RWI: ${rwi?.normalizedValue ?? 0}, Raw: ${rwi?.rawValue ?? 0}):
+   - Market Meaning: ${Number(rwi?.normalizedValue ?? 0) > 0.6 ? 'Affluent consumer base with high disposable income, responsive to specialty services and premium retail.' : Number(rwi?.normalizedValue ?? 0) > 0.3 ? 'Middle-income market focused on convenience, everyday essentials, and value.' : 'Budget-conscious, high-volume consumer market looking for affordable essential goods.'}
+4. Local News & Development Buzz (GDELT: ${gdelt?.normalizedValue ?? 0}, Raw: ${gdelt?.rawValue ?? 0}):
+   - Market Meaning: ${Number(gdelt?.normalizedValue ?? 0) > 0.6 ? 'High media visibility, major infrastructure or commercial development projects underway.' : 'Normal baseline community coverage.'}
 
-INSTRUCTIONS:
-1. Always base your analysis and conclusions directly on this sector's ground truth signals above.
-2. Be conversational, natural, insightful, and practical (e.g. advise on business viability, foot traffic, investment potential, or urban growth).
-3. Do not just regurgitate raw numbers; explain what the numbers mean for the user's specific question.
-4. Keep answers concise, punchy, and direct (between 2 to 4 sentences or under 100 words unless the user explicitly requests a comprehensive breakdown).
-5. If asked about something outside economic activity, urban planning, or this location's data, politely redirect back to spatial economic insights.`;
+CRITICAL RULES FOR HUMANIZED MARKET ADVICE:
+1. NEVER cite raw scores, decimal numbers, or sensor acronyms (e.g. do NOT say "VIIRS is 0.82" or "GHSL 0.57"). Talk in 100% human market language!
+2. Explain the REAL-WORLD MARKET: who the customers are, pedestrian foot traffic patterns, willingness to spend, competitive fit (e.g., cafes, retail, pharmacies, grocery, delivery, logistics), and optimal operating hours.
+3. Be candid, practical, and balanced: highlight both market opportunities and commercial risks or bottlenecks (e.g. rent pressure vs margin, budget vs luxury).
+4. Keep answers conversational, engaging, and concise (2 to 4 sentences or under 100 words unless the user asks for a comprehensive detailed breakdown).`;
 
   const chatMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: systemPrompt },
