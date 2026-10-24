@@ -13,10 +13,8 @@ export const createApiKey = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const listApiKeys = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await apiPlatformService.listApiKeys(
-    req.user!.id,
-    req.query.orgId as string | undefined,
-  );
+  const orgId = (req.headers['x-org-id'] as string) || (req.query.orgId as string) || undefined;
+  const result = await apiPlatformService.listApiKeys(req.user!.id, orgId);
   res
     .status(HTTP_STATUS.OK)
     .json(new SuccessResponse(HTTP_STATUS.OK, 'API keys retrieved successfully', result));

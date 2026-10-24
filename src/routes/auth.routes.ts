@@ -21,6 +21,7 @@ router.post('/logout', authMiddleware, authController.logout);
 
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 router.get('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
+router.post('/resend-verification', authMiddleware, authLimiter, authController.resendVerification);
 
 router.post(
   '/forgot-password',

@@ -6,17 +6,16 @@ import { watchlistsService } from '../services/watchlists.service.js';
 import { AuthRequest } from '../types/index.js';
 
 export const createWatchlist = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await watchlistsService.createWatchlist(req.user!.id, req.body);
+  const orgId = req.body.orgId || (req.headers['x-org-id'] as string) || undefined;
+  const result = await watchlistsService.createWatchlist(req.user!.id, { ...req.body, orgId });
   res
     .status(HTTP_STATUS.CREATED)
     .json(new SuccessResponse(HTTP_STATUS.CREATED, 'Watchlist created successfully', result));
 });
 
 export const listWatchlists = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await watchlistsService.listUserWatchlists(
-    req.user!.id,
-    req.query.orgId as string | undefined,
-  );
+  const orgId = (req.headers['x-org-id'] as string) || (req.query.orgId as string) || undefined;
+  const result = await watchlistsService.listUserWatchlists(req.user!.id, orgId);
   res
     .status(HTTP_STATUS.OK)
     .json(new SuccessResponse(HTTP_STATUS.OK, 'Watchlists retrieved successfully', result));

@@ -234,3 +234,42 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
 
   return user;
 };
+
+export const resendVerificationEmail = async (userIdOrEmail: {
+  userId?: string;
+  email?: string;
+}) => {
+  let user;
+  if (userIdOrEmail.userId) {
+    user = await prisma.user.findUnique({ where: { id: userIdOrEmail.userId } });
+  } else if (userIdOrEmail.email) {
+    user = await prisma.user.findUnique({
+      where: { email: userIdOrEmail.email.toLowerCase().trim() },
+    });
+  }
+
+  if (!user) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User not found');
+  }
+
+  if (user.isEmailVerified) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Email is already verified');
+  }
+
+  const rawVerificationToken = randomUUID();
+  const tokenHash = hashToken(rawVerificationToken);
+  const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await prisma.emailToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      type: 'EMAIL_VERIFICATION',
+      expiresAt: tokenExpiresAt,
+    },
+  });
+
+  sendVerificationEmail(user.email, rawVerificationToken).catch(() => {});
+
+  return { message: 'Verification email sent successfully' };
+};

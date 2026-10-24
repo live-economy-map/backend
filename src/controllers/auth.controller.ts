@@ -52,3 +52,10 @@ export const patchMe = asyncHandler(async (req: AuthRequest, res: Response) => {
     .status(HTTP_STATUS.OK)
     .json(new SuccessResponse(HTTP_STATUS.OK, 'Profile updated successfully', updatedProfile));
 });
+
+export const resendVerification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  const email = (req.body?.email as string) || undefined;
+  const result = await authService.resendVerificationEmail({ userId, email });
+  res.status(HTTP_STATUS.OK).json(new SuccessResponse(HTTP_STATUS.OK, result.message, {}));
+});
