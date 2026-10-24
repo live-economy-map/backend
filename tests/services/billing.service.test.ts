@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { billingService } from '../../src/services/billing.service.js';
 import { prisma } from '../../src/config/db.js';
-import { chapaClient } from '../../src/services/chapa.client.js';
 
 vi.mock('../../src/config/db.js');
-vi.mock('../../src/services/chapa.client.js');
 
 describe('billing.service', () => {
   beforeEach(() => {
@@ -70,8 +68,8 @@ describe('billing.service', () => {
     });
   });
 
-  describe('initializeCheckout', () => {
-    it('creates a pending payment with subscription shell and returns checkoutUrl', async () => {
+  describe('initializeCheckout (hardcoded)', () => {
+    it('immediately activates subscription, creates successful payment, and returns checkoutUrl', async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
         id: 'u-1',
         email: 'user@example.com',
@@ -85,15 +83,12 @@ describe('billing.service', () => {
       } as any);
       vi.mocked(prisma.subscription.upsert).mockResolvedValueOnce({
         id: 'sub-1',
+        status: 'ACTIVE',
       } as any);
       vi.mocked(prisma.payment.create).mockResolvedValueOnce({
         id: 'pay-1',
+        status: 'SUCCESS',
       } as any);
-      vi.mocked(chapaClient.initialize).mockResolvedValueOnce({
-        status: 'success',
-        message: 'Link generated',
-        checkoutUrl: 'https://checkout.chapa.co/123',
-      });
 
       const res = await billingService.initializeCheckout('u-1', {
         planId: 'p-1',
@@ -101,15 +96,25 @@ describe('billing.service', () => {
       });
 
       expect(res.paymentId).toBe('pay-1');
-      expect(res.checkoutUrl).toBe('https://checkout.chapa.co/123');
-      expect(prisma.subscription.upsert).toHaveBeenCalled();
-      expect(prisma.payment.create).toHaveBeenCalled();
-      expect(chapaClient.initialize).toHaveBeenCalled();
+      expect(res.checkoutUrl).toContain('https://app.example.com/success');
+      expect(res.checkoutUrl).toContain('txRef=');
+      expect(prisma.subscription.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'u-1' },
+          create: expect.objectContaining({ status: 'ACTIVE' }),
+          update: expect.objectContaining({ status: 'ACTIVE' }),
+        }),
+      );
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'SUCCESS' }),
+        }),
+      );
     });
   });
 
   describe('verifyPayment', () => {
-    it('returns existing payment if already SUCCESS (idempotent)', async () => {
+    it('returns payment and active subscription for valid txRef', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValueOnce({
         id: 'pay-1',
         status: 'SUCCESS',
@@ -119,73 +124,23 @@ describe('billing.service', () => {
         },
       } as any);
 
-      const res = await billingService.verifyPayment('LEM-123');
-      expect(res.payment.status).toBe('SUCCESS');
-      expect(chapaClient.verify).not.toHaveBeenCalled();
-    });
-
-    it('verifies pending payment, marks it SUCCESS, and activates subscription', async () => {
-      vi.mocked(prisma.payment.findUnique).mockResolvedValueOnce({
-        id: 'pay-1',
-        status: 'PENDING',
-        subscriptionId: 'sub-1',
-        subscription: {
-          id: 'sub-1',
-          status: 'INCOMPLETE',
-          currentPeriodEnd: new Date(),
-          plan: { id: 'p-1', interval: 'MONTHLY' },
-        },
-      } as any);
-      vi.mocked(chapaClient.verify).mockResolvedValueOnce({
-        status: 'success',
-        message: 'Verified',
-        data: {
-          status: 'success',
-          txRef: 'LEM-123',
-          amount: 1500,
-          currency: 'ETB',
-          reference: 'CHAPA-REF-123',
-        },
-      });
-      vi.mocked(prisma.payment.update).mockResolvedValueOnce({
-        id: 'pay-1',
-        status: 'SUCCESS',
-      } as any);
-      vi.mocked(prisma.subscription.update).mockResolvedValueOnce({
-        id: 'sub-1',
-        status: 'ACTIVE',
-      } as any);
-
-      const res = await billingService.verifyPayment('LEM-123');
+      const res = await billingService.verifyPayment('SUB-123');
       expect(res.payment.status).toBe('SUCCESS');
       expect(res.subscription?.status).toBe('ACTIVE');
-      expect(prisma.subscription.update).toHaveBeenCalled();
+    });
+
+    it('throws 404 when payment does not exist', async () => {
+      vi.mocked(prisma.payment.findUnique).mockResolvedValueOnce(null);
+
+      await expect(billingService.verifyPayment('NONEXISTENT')).rejects.toThrow(
+        'Payment not found',
+      );
     });
   });
 
-  describe('handleChapaWebhook', () => {
-    it('rejects invalid signature with 400', async () => {
-      vi.mocked(chapaClient.verifyWebhookSignature).mockReturnValueOnce(false);
-
-      await expect(billingService.handleChapaWebhook('bad-sig', 'raw', {})).rejects.toThrow(
-        'Invalid webhook signature',
-      );
-    });
-
-    it('verifies payment when signature is valid', async () => {
-      vi.mocked(chapaClient.verifyWebhookSignature).mockReturnValueOnce(true);
-      vi.mocked(prisma.payment.findUnique).mockResolvedValueOnce({
-        id: 'pay-1',
-        status: 'SUCCESS',
-        subscription: {
-          id: 'sub-1',
-          status: 'ACTIVE',
-        },
-      } as any);
-
-      const res = await billingService.handleChapaWebhook('good-sig', 'raw', {
-        tx_ref: 'LEM-123',
-      });
+  describe('handleChapaWebhook stub', () => {
+    it('returns received true for stub compatibility', async () => {
+      const res = await billingService.handleChapaWebhook('sig', 'raw', {});
       expect(res.received).toBe(true);
     });
   });

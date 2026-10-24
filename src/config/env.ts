@@ -17,9 +17,9 @@ export const envSchema = z.object({
   GROQ_KEY: z.string().optional(),
   ADMIN_SEED_EMAIL: z.string(),
   ADMIN_SEED_PASSWORD: z.string(),
-  CHAPA_SECRET_KEY: z.string().default('dev_chapa_secret_key'),
-  CHAPA_WEBHOOK_SECRET: z.string().default('dev_chapa_webhook_secret'),
-  CHAPA_BASE_URL: z.string().default('https://api.chapa.co/v1'),
+  CHAPA_SECRET_KEY: z.string().optional(),
+  CHAPA_WEBHOOK_SECRET: z.string().optional(),
+  CHAPA_BASE_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

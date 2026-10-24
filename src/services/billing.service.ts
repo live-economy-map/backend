@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/db.js';
 import ApiError from '../utils/ApiError.js';
 import { HTTP_STATUS } from '../constants/index.js';
-import { chapaClient } from './chapa.client.js';
+
 import {
   CheckoutInput,
   AdminCreatePlanInput,
@@ -48,7 +48,7 @@ export class BillingService {
   }
 
   /**
-   * Initialize a checkout session via Chapa.
+   * Directly activates subscription for the user with hardcoded instant confirmation.
    */
   async initializeCheckout(userId: string, input: CheckoutInput) {
     const user = await prisma.user.findUnique({
@@ -67,48 +67,56 @@ export class BillingService {
       throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Selected plan is not available');
     }
 
-    // Upsert subscription shell for user
     const now = new Date();
+    const daysToAdd = plan.interval === 'YEARLY' ? 365 : 30;
+    const currentPeriodEnd = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+
+    // Immediately activate subscription
     const subscription = await prisma.subscription.upsert({
       where: { userId },
       create: {
         userId,
         planId: plan.id,
-        status: 'INCOMPLETE',
+        status: 'ACTIVE',
         currentPeriodStart: now,
-        currentPeriodEnd: now,
+        currentPeriodEnd,
       },
       update: {
         planId: plan.id,
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd,
       },
+      include: { plan: true },
     });
 
-    const txRef = `LEM-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const txRef = `SUB-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
     const payment = await prisma.payment.create({
       data: {
         subscriptionId: subscription.id,
         amountEtb: plan.priceEtb,
-        status: 'PENDING',
+        status: 'SUCCESS',
         txRef,
+        verifiedAt: now,
+        rawWebhookJson: {
+          provider: 'HARDCODED_INTERNAL',
+          status: 'SUCCESS',
+          activatedAt: now.toISOString(),
+        },
       },
     });
 
-    // Convert ETB cents to ETB currency units for Chapa display
-    const amountInBirr = Number((plan.priceEtb / 100).toFixed(2));
-
-    const initResult = await chapaClient.initialize({
-      amount: amountInBirr,
-      currency: 'ETB',
-      email: user.email,
-      txRef,
-      returnUrl: input.returnUrl,
-    });
+    const returnUrl =
+      input.returnUrl || input.successUrl || 'http://localhost:5173/billing/success';
+    const separator = returnUrl.includes('?') ? '&' : '?';
+    const checkoutUrl = `${returnUrl}${separator}txRef=${txRef}`;
 
     return {
       paymentId: payment.id,
       txRef,
-      checkoutUrl: initResult.checkoutUrl,
+      checkoutUrl,
+      subscription,
       plan: {
         id: plan.id,
         name: plan.name,
@@ -119,7 +127,7 @@ export class BillingService {
   }
 
   /**
-   * Verify transaction with Chapa and activate subscription upon success (idempotent).
+   * Return verified subscription and payment details for txRef (hardcoded).
    */
   async verifyPayment(txRef: string) {
     const payment = await prisma.payment.findUnique({
@@ -138,71 +146,18 @@ export class BillingService {
       throw new ApiError(HTTP_STATUS.NOT_FOUND, `Payment not found for txRef: ${txRef}`);
     }
 
-    if (payment.status === 'SUCCESS') {
-      return { payment, subscription: payment.subscription };
-    }
-
-    const verifyResult = await chapaClient.verify(txRef);
-
-    if (verifyResult.data.status === 'success') {
-      const updatedPayment = await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'SUCCESS',
-          verifiedAt: new Date(),
-          rawWebhookJson: verifyResult as any,
-        },
-      });
-
-      // Calculate new period end
-      const daysToAdd = payment.subscription.plan.interval === 'YEARLY' ? 365 : 30;
-      const now = new Date();
-      const baseDate =
-        payment.subscription.status === 'ACTIVE' &&
-        new Date(payment.subscription.currentPeriodEnd) > now
-          ? new Date(payment.subscription.currentPeriodEnd)
-          : now;
-
-      const newPeriodEnd = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-
-      const updatedSubscription = await prisma.subscription.update({
-        where: { id: payment.subscriptionId },
-        data: {
-          status: 'ACTIVE',
-          currentPeriodStart: now,
-          currentPeriodEnd: newPeriodEnd,
-        },
-        include: { plan: true },
-      });
-
-      return { payment: updatedPayment, subscription: updatedSubscription };
-    } else {
-      const failedPayment = await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'FAILED',
-        },
-      });
-      return { payment: failedPayment, subscription: payment.subscription };
-    }
+    return { payment, subscription: payment.subscription };
   }
 
   /**
-   * Handle incoming Chapa webhook notification.
+   * Webhook stub for backwards compatibility.
    */
-  async handleChapaWebhook(signature: string | undefined, rawBody: string | Buffer, payload: any) {
-    const isValid = chapaClient.verifyWebhookSignature(signature, rawBody);
-    if (!isValid) {
-      throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid webhook signature');
-    }
-
-    const txRef = payload?.tx_ref || payload?.data?.tx_ref;
-    if (!txRef) {
-      throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Missing transaction reference in payload');
-    }
-
-    await this.verifyPayment(txRef);
-    return { received: true };
+  async handleChapaWebhook(
+    _signature: string | undefined,
+    _rawBody: string | Buffer,
+    _payload: any,
+  ) {
+    return { received: true, status: 'hardcoded' };
   }
 
   /**
