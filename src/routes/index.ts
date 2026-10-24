@@ -11,6 +11,7 @@ import meRoutes from './me.routes.js';
 import plansRoutes from './plans.routes.js';
 import billingRoutes from './billing.routes.js';
 import adminBillingRoutes from './adminBilling.routes.js';
+import adminReportDraftsRoutes from './adminReportDrafts.routes.js';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/admin/pipeline', adminPipelineRoutes);
 router.use('/admin/case-studies', adminCaseStudiesRoutes);
 router.use('/admin/billing', adminBillingRoutes);
 router.use('/admin', adminReportRequestsRoutes);
+router.use('/admin', adminReportDraftsRoutes);
 
 export default router;
