@@ -5,9 +5,13 @@ import contentRoutes from './content.routes.js';
 import adminAuthRoutes from './adminAuth.routes.js';
 import adminPipelineRoutes from './adminPipeline.routes.js';
 import adminCaseStudiesRoutes from './adminCaseStudies.routes.js';
+import authRoutes from './auth.routes.js';
+import meRoutes from './me.routes.js';
 
 const router = Router();
 
+router.use('/auth', authRoutes);
+router.use('/me', meRoutes);
 router.use('/map', mapRoutes);
 router.use('/case-studies', caseStudiesRoutes);
 router.use('/content', contentRoutes);

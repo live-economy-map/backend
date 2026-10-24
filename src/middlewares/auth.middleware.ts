@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../types/index.js';
+import { AuthRequest, UserRole } from '../types/index.js';
 import { verifyToken } from '../utils/jwt.js';
 import ApiError from '../utils/ApiError.js';
 import { HTTP_STATUS } from '../constants/index.js';
@@ -13,9 +13,19 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => 
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = verifyToken(token) as { id: string; email: string; createdAt: Date };
+    const payload = verifyToken(token) as {
+      id: string;
+      email: string;
+      role?: UserRole;
+      createdAt: Date;
+    };
 
-    req.user = payload;
+    req.user = {
+      id: payload.id,
+      email: payload.email,
+      role: payload.role || 'ADMIN',
+      createdAt: payload.createdAt,
+    };
     next();
   } catch (error) {
     next(new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invalid or expired token'));
