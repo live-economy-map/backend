@@ -52,10 +52,12 @@ export class ChapaClient {
   async initialize(params: ChapaInitializeParams): Promise<ChapaInitializeResult> {
     // If in test or dev mock mode without valid live key
     if (this.secretKey === 'dev_chapa_secret_key' || env.NODE_ENV === 'test') {
+      const returnUrl = params.returnUrl || `${env.CLIENT_URL}/billing/success`;
+      const separator = returnUrl.includes('?') ? '&' : '?';
       return {
         status: 'success',
         message: 'Mock hosted link generated',
-        checkoutUrl: `https://checkout.chapa.co/checkout/web/payment/mock-${params.txRef}`,
+        checkoutUrl: `${returnUrl}${separator}txRef=${params.txRef}`,
       };
     }
 
