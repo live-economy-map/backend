@@ -83,6 +83,17 @@ enum DraftStatus {
   DELIVERED
 }
 
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ApiTier {
+  COMMERCIAL
+  INSTITUTIONAL
+}
+
 // ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
@@ -157,6 +168,7 @@ model GridCell {
   caseStudies              CaseStudy[]
   savedAreas               SavedArea[]
   alertRules               AlertRule[]
+  watchlistItems           WatchlistItem[]
 
   @@unique([cellRow, cellCol])
 }
@@ -282,6 +294,9 @@ model User {
   alertRules             AlertRule[]
   notifications          Notification[]
   reviewedDrafts         ReportDraft[]         @relation("AdminReviewedDrafts")
+  orgMemberships         OrgMember[]
+  apiKeys                ApiKey[]
+  watchlists             Watchlist[]
 
   @@index([role])
   @@index([isEmailVerified])
@@ -475,4 +490,100 @@ model ExportLog {
   cellCount      Int
   createdAt      DateTime     @default(now())
 }
+
+// ─────────────────────────────────────────────
+// V4 Models — Organizations, API Platform & Watchlists
+// ─────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    OrgMember[]
+  apiKeys    ApiKey[]
+  watchlists Watchlist[]
+}
+
+model OrgMember {
+  id             String       @id @default(uuid())
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(MEMBER)
+  createdAt      DateTime     @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id           String        @id @default(uuid())
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  keyHash      String        @unique
+  keyPrefix    String
+  tier         ApiTier       @default(COMMERCIAL)
+  rateLimitRpm Int           @default(60)
+  isActive     Boolean       @default(true)
+  lastUsedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+
+  usages       ApiUsage[]
+
+  @@index([keyHash])
+  @@index([userId])
+  @@index([orgId])
+}
+
+model ApiUsage {
+  id             String   @id @default(uuid())
+  apiKeyId       String
+  apiKey         ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  endpoint       String
+  method         String
+  statusCode     Int
+  responseTimeMs Int
+  createdAt      DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+}
+
+model Watchlist {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  items        WatchlistItem[]
+
+  @@index([userId])
+  @@index([orgId])
+}
+
+model WatchlistItem {
+  id          String    @id @default(uuid())
+  watchlistId String
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  gridCellId  String
+  gridCell    GridCell  @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  addedAt     DateTime  @default(now())
+  notes       String?
+
+  @@unique([watchlistId, gridCellId])
+  @@index([watchlistId])
+}
+
 

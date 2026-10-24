@@ -12,6 +12,10 @@ import plansRoutes from './plans.routes.js';
 import billingRoutes from './billing.routes.js';
 import adminBillingRoutes from './adminBilling.routes.js';
 import adminReportDraftsRoutes from './adminReportDrafts.routes.js';
+import apiKeysRoutes from './apiKeys.routes.js';
+import publicApiRoutes from './publicApi.routes.js';
+import organizationsRoutes from './organizations.routes.js';
+import watchlistsRoutes from './watchlists.routes.js';
 
 const router = Router();
 
@@ -19,6 +23,10 @@ router.use('/auth', authRoutes);
 router.use('/me', meRoutes);
 router.use('/plans', plansRoutes);
 router.use('/billing', billingRoutes);
+router.use('/api-keys', apiKeysRoutes);
+router.use('/public', publicApiRoutes);
+router.use('/orgs', organizationsRoutes);
+router.use('/watchlists', watchlistsRoutes);
 router.use('/map', mapRoutes);
 router.use('/case-studies', caseStudiesRoutes);
 router.use('/content', contentRoutes);
