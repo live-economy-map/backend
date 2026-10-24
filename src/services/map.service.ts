@@ -275,6 +275,8 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
       normalizedValue: s.normalizedValue,
     })),
     currentSnapshot.compositeScore,
+    cell.areaLabel,
+    trend,
   );
 
   return {
@@ -295,13 +297,36 @@ export const getCellDetail = async (cellId: string, period?: string): Promise<Ce
 export const generateCellSummary = async (
   signals: Array<{ source: string; rawValue: number; normalizedValue: number }>,
   compositeScore: number,
+  areaLabel?: string | null,
+  trend?: 'up' | 'down' | 'flat',
 ): Promise<string | null> => {
   try {
-    const prompt = `Provide a one-sentence summary of economic activity based on these signals:\n${signals
-      .map((s) => `${s.source}: raw=${s.rawValue}, normalized=${s.normalizedValue}`)
-      .join('\n')}\nComposite Score: ${compositeScore}`;
+    const locationName = areaLabel ? `the ${areaLabel} area` : 'this selected sector';
+    const trendText =
+      trend === 'up'
+        ? 'an upward growth trajectory'
+        : trend === 'down'
+          ? 'a cooling trend'
+          : 'stable performance';
 
-    return await generateText(prompt);
+    const signalsDetail = signals
+      .map((s) => `- ${s.source}: raw=${s.rawValue}, normalized=${s.normalizedValue}`)
+      .join('\n');
+
+    const prompt = `You are a seasoned regional economic intelligence advisor.
+Provide a humanized, insightful 2-sentence economic review for ${locationName}.
+
+Composite Score: ${compositeScore} (${trendText})
+Observed Signals & Telemetry:
+${signalsDetail}
+
+Instructions:
+1. Speak in a natural, fluent, and confident human tone (do not robotically list raw values).
+2. Synthesize what these activity indicators mean for local commerce, foot traffic, or urban development in 2 concise sentences.
+3. Keep the entire response under 45 words.`;
+
+    const summary = await generateText(prompt);
+    return summary ? summary.trim() : null;
   } catch {
     return null;
   }

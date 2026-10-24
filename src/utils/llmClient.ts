@@ -2,13 +2,15 @@ import axios, { AxiosError } from 'axios';
 import { env } from '../config/env.js';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'openai/gpt-oss-120b'; // Updated to a valid model
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 export interface LLMResponse {
   content: string;
 }
 
 export const callLLM = async (prompt: string): Promise<LLMResponse> => {
+  const apiKey = (env.GROQ_KEY || env.LLM_API_KEY || '').trim();
+
   try {
     const response = await axios.post(
       GROQ_API_URL,
@@ -19,7 +21,7 @@ export const callLLM = async (prompt: string): Promise<LLMResponse> => {
       },
       {
         headers: {
-          Authorization: `Bearer ${env.LLM_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         timeout: 15000,
