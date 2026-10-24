@@ -160,13 +160,26 @@ export const adminListReportRequests = async (query: AdminReportRequestsQuery) =
     where.assignedAdminId = query.assignedAdminId;
   }
 
-  const skip = (query.page - 1) * query.limit;
+  if (query.search) {
+    const search = query.search;
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { questionPrompt: { contains: search, mode: 'insensitive' } },
+      { user: { email: { contains: search, mode: 'insensitive' } } },
+      { user: { fullName: { contains: search, mode: 'insensitive' } } },
+      { areaCellIds: { array_contains: search } },
+    ];
+  }
+
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(query.limit) || 20));
+  const skip = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
     prisma.reportRequest.findMany({
       where,
       skip,
-      take: query.limit,
+      take: limit,
       include: {
         user: {
           select: {
@@ -188,6 +201,13 @@ export const adminListReportRequests = async (query: AdminReportRequestsQuery) =
         deliverables: {
           select: { id: true, fileName: true, fileUrl: true },
         },
+        events: {
+          orderBy: { createdAt: 'desc' },
+        },
+        drafts: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     }),
@@ -195,9 +215,12 @@ export const adminListReportRequests = async (query: AdminReportRequestsQuery) =
   ]);
 
   return {
-    items,
-    page: query.page,
-    limit: query.limit,
+    items: items.map((item) => ({
+      ...item,
+      draft: item.drafts?.[0] || null,
+    })),
+    page,
+    limit,
     total,
   };
 };
@@ -354,12 +377,16 @@ export const getDemandMetrics = async () => {
 
   return {
     totalRequests,
+    distinctUsers: distinctUsersCount,
     distinctUsersCount,
-    statusBreakdown: formattedStatusBreakdown,
+    targetRequests: 10,
+    targetUsers: 5,
+    gateStatus: isGateMet ? 'PASSED' : 'PENDING',
     gateThreshold: {
       minDistinctUsers: 5,
       minTotalRequests: 10,
     },
     isGateMet,
+    statusBreakdown: formattedStatusBreakdown,
   };
 };

@@ -154,6 +154,26 @@ describe('reportRequests.service', () => {
       expect(result.total).toBe(1);
       expect(result.items).toHaveLength(1);
     });
+
+    it('constructs OR search filter across title, prompt, user, and cell IDs', async () => {
+      mockPrisma.reportRequest.findMany.mockResolvedValue([{ id: 'req-1', drafts: [] }]);
+      mockPrisma.reportRequest.count.mockResolvedValue(1);
+
+      await adminListReportRequests({ page: 1, limit: 10, search: 'Bole' });
+      expect(mockPrisma.reportRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { title: { contains: 'Bole', mode: 'insensitive' } },
+              { questionPrompt: { contains: 'Bole', mode: 'insensitive' } },
+              { user: { email: { contains: 'Bole', mode: 'insensitive' } } },
+              { user: { fullName: { contains: 'Bole', mode: 'insensitive' } } },
+              { areaCellIds: { array_contains: 'Bole' } },
+            ]),
+          }),
+        }),
+      );
+    });
   });
 
   describe('adminUpdateReportRequest & adminAttachDeliverable', () => {
@@ -213,6 +233,10 @@ describe('reportRequests.service', () => {
       const metrics = await getDemandMetrics();
       expect(metrics.totalRequests).toBe(12);
       expect(metrics.distinctUsersCount).toBe(5);
+      expect(metrics.distinctUsers).toBe(5);
+      expect(metrics.targetRequests).toBe(10);
+      expect(metrics.targetUsers).toBe(5);
+      expect(metrics.gateStatus).toBe('PASSED');
       expect(metrics.isGateMet).toBe(true);
       expect(metrics.statusBreakdown.SUBMITTED).toBe(8);
       expect(metrics.statusBreakdown.DELIVERED).toBe(4);

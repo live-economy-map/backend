@@ -80,6 +80,43 @@ describe('adminReportRequests.routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.items).toHaveLength(1);
     });
+
+    it('returns 200 with empty query string filters (?status=&priority=&search=)', async () => {
+      vi.mocked(reportRequestsService.adminListReportRequests).mockResolvedValue({
+        items: [{ id: 'req-1', status: 'SUBMITTED' } as any],
+        page: 1,
+        limit: 20,
+        total: 1,
+      });
+
+      const res = await request(app)
+        .get('/admin/report-requests?page=1&limit=10&status=&priority=&search=')
+        .set('Authorization', 'Bearer admin-token');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.items).toHaveLength(1);
+      expect(reportRequestsService.adminListReportRequests).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, limit: 10 }),
+      );
+    });
+
+    it('returns 200 with priority enum and search query (?priority=HIGH&search=Bole)', async () => {
+      vi.mocked(reportRequestsService.adminListReportRequests).mockResolvedValue({
+        items: [{ id: 'req-2', status: 'IN_REVIEW' } as any],
+        page: 1,
+        limit: 10,
+        total: 1,
+      });
+
+      const res = await request(app)
+        .get('/admin/report-requests?page=1&limit=10&priority=HIGH&search=Bole')
+        .set('Authorization', 'Bearer admin-token');
+
+      expect(res.status).toBe(200);
+      expect(reportRequestsService.adminListReportRequests).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, limit: 10, priority: true, search: 'Bole' }),
+      );
+    });
   });
 
   describe('PATCH /admin/report-requests/:id', () => {
@@ -99,6 +136,27 @@ describe('adminReportRequests.routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('IN_PROGRESS');
+    });
+
+    it('returns 200 when updating priority with string enum (HIGH)', async () => {
+      vi.mocked(reportRequestsService.adminUpdateReportRequest).mockResolvedValue({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        priority: true,
+      } as any);
+
+      const res = await request(app)
+        .patch('/admin/report-requests/123e4567-e89b-12d3-a456-426614174000')
+        .set('Authorization', 'Bearer admin-token')
+        .send({
+          priority: 'HIGH',
+        });
+
+      expect(res.status).toBe(200);
+      expect(reportRequestsService.adminUpdateReportRequest).toHaveBeenCalledWith(
+        'admin-123',
+        '123e4567-e89b-12d3-a456-426614174000',
+        expect.objectContaining({ priority: true }),
+      );
     });
   });
 

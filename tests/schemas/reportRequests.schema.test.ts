@@ -127,5 +127,39 @@ describe('reportRequests.schema', () => {
         expect(result.data.query.priority).toBe(true);
       }
     });
+
+    it('preprocesses empty filter strings to undefined and supports search and string priorities', () => {
+      const input = {
+        query: {
+          status: '',
+          priority: 'HIGH',
+          assignedAdminId: '',
+          search: '  Bole Corridor  ',
+        },
+      };
+
+      const result = adminReportRequestsQuerySchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.query.status).toBeUndefined();
+        expect(result.data.query.priority).toBe(true);
+        expect(result.data.query.assignedAdminId).toBeUndefined();
+        expect(result.data.query.search).toBe('Bole Corridor');
+      }
+    });
+
+    it('transforms priority "LOW" to false', () => {
+      const input = {
+        query: {
+          priority: 'LOW',
+        },
+      };
+
+      const result = adminReportRequestsQuerySchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.query.priority).toBe(false);
+      }
+    });
   });
 });

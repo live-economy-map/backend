@@ -41,7 +41,13 @@ export const adminUpdateReportRequestSchema = z.object({
   body: z
     .object({
       status: z.enum(REQUEST_STATUSES).optional(),
-      priority: z.boolean().optional(),
+      priority: z
+        .union([z.boolean(), z.enum(['true', 'false', 'LOW', 'MEDIUM', 'HIGH', 'URGENT'])])
+        .transform((val) => {
+          if (typeof val === 'boolean') return val;
+          return val === 'true' || val === 'HIGH' || val === 'URGENT';
+        })
+        .optional(),
       assignedAdminId: z.string().uuid().nullable().optional(),
       internalNotes: z.string().trim().max(2000).optional(),
       statusChangeNote: z.string().trim().max(500).optional(),
@@ -78,12 +84,24 @@ export const adminReportRequestsQuerySchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-    status: z.enum(REQUEST_STATUSES).optional(),
-    priority: z
-      .enum(['true', 'false'])
-      .transform((val) => val === 'true')
-      .optional(),
-    assignedAdminId: z.string().uuid().optional(),
+    status: z.preprocess(
+      (val) => (val === '' || val === 'ALL' ? undefined : val),
+      z.enum(REQUEST_STATUSES).optional(),
+    ),
+    priority: z.preprocess((val) => {
+      if (val === '' || val === 'ALL' || val === undefined || val === null) return undefined;
+      if (val === 'true' || val === true || val === 'HIGH' || val === 'URGENT') return true;
+      if (val === 'false' || val === false || val === 'LOW' || val === 'MEDIUM') return false;
+      return val;
+    }, z.boolean().optional()),
+    assignedAdminId: z.preprocess(
+      (val) => (val === '' ? undefined : val),
+      z.string().uuid().optional(),
+    ),
+    search: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() !== '' ? val.trim() : undefined),
+      z.string().optional(),
+    ),
   }),
 });
 
