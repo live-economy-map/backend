@@ -116,12 +116,18 @@ describe('apiPlatform.service', () => {
           isActive: true,
         },
       ] as any);
-      vi.mocked(prisma.apiUsage.count).mockResolvedValueOnce(42);
+      vi.mocked(prisma.apiUsage.count).mockResolvedValueOnce(42).mockResolvedValueOnce(2);
+      vi.mocked(prisma.apiUsage.findMany).mockResolvedValueOnce([{ createdAt: new Date() }] as any);
 
       const res = await apiPlatformService.getUsageSummary('user-1');
       expect(res.totalKeys).toBe(1);
       expect(res.totalCalls).toBe(42);
+      expect(res.totalRequests).toBe(42);
+      expect(res.rpmLimit).toBe(60);
+      expect(res.remainingRpm).toBe(58);
+      expect(res.dailyUsage).toHaveLength(7);
       expect(res.keys[0].name).toBe('App 1');
+      expect(res.keys[0].rpmLimit).toBe(60);
     });
   });
 });

@@ -9,7 +9,7 @@ export const generateDraftSchema = z.object({
       customPrompt: z.string().max(2000).optional(),
       model: z.string().default('llama-3.3-70b-versatile'),
     })
-    .default({}),
+    .default({ model: 'llama-3.3-70b-versatile' }),
 });
 
 export const getDraftParamsSchema = z.object({

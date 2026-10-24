@@ -14,12 +14,16 @@ import {
   discoverCandidates,
 } from '../controllers/adminCaseStudies.controller.js';
 
+import { requireRole } from '../middlewares/role.middleware.js';
+
 const router = Router();
 
-router.get('/', authMiddleware, listAllCaseStudies);
-router.post('/', authMiddleware, validate(createCaseStudySchema), createCaseStudy);
-router.patch('/:caseStudyId', authMiddleware, validate(updateCaseStudySchema), updateCaseStudy);
-router.delete('/:caseStudyId', authMiddleware, deleteCaseStudy);
-router.post('/discover', authMiddleware, validate(discoverBodySchema), discoverCandidates);
+router.use(authMiddleware, requireRole('ADMIN'));
+
+router.get('/', listAllCaseStudies);
+router.post('/', validate(createCaseStudySchema), createCaseStudy);
+router.patch('/:caseStudyId', validate(updateCaseStudySchema), updateCaseStudy);
+router.delete('/:caseStudyId', deleteCaseStudy);
+router.post('/discover', validate(discoverBodySchema), discoverCandidates);
 
 export default router;

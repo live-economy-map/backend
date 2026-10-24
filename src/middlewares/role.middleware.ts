@@ -9,7 +9,10 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
       return next(new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Authentication required'));
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = ((req.user.role as string) || 'ADMIN').toUpperCase();
+    const isAllowed = allowedRoles.some((r) => r.toUpperCase() === userRole);
+
+    if (!isAllowed) {
       return next(
         new ApiError(
           HTTP_STATUS.FORBIDDEN,

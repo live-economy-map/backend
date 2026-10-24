@@ -71,12 +71,51 @@ export const registerUser = async (input: RegisterInput) => {
     createdAt: user.createdAt,
   });
 
-  return { user, token };
+  return { user: formatUserProfile(user), token };
 };
+
+export function formatUserProfile(user: any) {
+  const activeSub =
+    user.subscription && user.subscription.status === 'ACTIVE' ? user.subscription : null;
+
+  const planName = activeSub?.plan?.name || 'Free';
+  const planLower = planName.toLowerCase();
+  const planTier = activeSub
+    ? planLower.includes('enterprise') || planLower.includes('institutional')
+      ? 'ENTERPRISE'
+      : planLower.includes('pro') || planLower.includes('analyst')
+        ? 'PRO'
+        : 'FREE'
+    : 'FREE';
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    fullName: user.fullName,
+    organizationName: user.organizationName,
+    phoneNumber: user.phoneNumber,
+    telegramHandle: user.telegramHandle,
+    isEmailVerified: user.isEmailVerified,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    plan: planName,
+    planTier,
+    planStatus: activeSub ? activeSub.status : 'ACTIVE',
+    subscription: user.subscription || null,
+  };
+}
 
 export const loginUser = async (input: LoginInput) => {
   const user = await prisma.user.findUnique({
     where: { email: input.email },
+    include: {
+      subscription: {
+        include: {
+          plan: true,
+        },
+      },
+    },
   });
 
   const isMatch = await bcrypt.compare(input.password, user?.password ?? DUMMY_HASH);
@@ -93,17 +132,7 @@ export const loginUser = async (input: LoginInput) => {
   });
 
   return {
-    user: {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      fullName: user.fullName,
-      organizationName: user.organizationName,
-      phoneNumber: user.phoneNumber,
-      telegramHandle: user.telegramHandle,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt,
-    },
+    user: formatUserProfile(user),
     token,
   };
 };
@@ -202,17 +231,12 @@ export const resetPassword = async (rawToken: string, newPassword: string) => {
 export const getProfile = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      organizationName: true,
-      phoneNumber: true,
-      telegramHandle: true,
-      isEmailVerified: true,
-      createdAt: true,
-      updatedAt: true,
+    include: {
+      subscription: {
+        include: {
+          plan: true,
+        },
+      },
     },
   });
 
@@ -220,7 +244,7 @@ export const getProfile = async (userId: string) => {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User not found');
   }
 
-  return user;
+  return formatUserProfile(user);
 };
 
 export const updateProfile = async (userId: string, input: UpdateProfileInput) => {
@@ -232,21 +256,16 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
       ...(input.phoneNumber !== undefined ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.telegramHandle !== undefined ? { telegramHandle: input.telegramHandle } : {}),
     },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      organizationName: true,
-      phoneNumber: true,
-      telegramHandle: true,
-      isEmailVerified: true,
-      createdAt: true,
-      updatedAt: true,
+    include: {
+      subscription: {
+        include: {
+          plan: true,
+        },
+      },
     },
   });
 
-  return user;
+  return formatUserProfile(user);
 };
 
 export const resendVerificationEmail = async (userIdOrEmail: {

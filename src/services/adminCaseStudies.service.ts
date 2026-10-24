@@ -33,24 +33,32 @@ const discoveryResultSchema = z.object({
 // GET /admin/case-studies — sees both published and draft entries (unlike the
 // public caseStudies.service, which always forces isPublished: true).
 export const getAllCaseStudies = async (
-  isPublished?: boolean,
-  page: number = 1,
-  limit: number = 20,
+  isPublished?: boolean | string,
+  page: number | string = 1,
+  limit: number | string = 20,
 ): Promise<{ items: AdminCaseStudyDTO[]; page: number; limit: number; total: number }> => {
-  const skip = (page - 1) * limit;
-  const where = isPublished === undefined ? {} : { isPublished };
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 20);
+  const skip = (pageNum - 1) * limitNum;
+  const parsedPublished =
+    isPublished === true || isPublished === 'true'
+      ? true
+      : isPublished === false || isPublished === 'false'
+        ? false
+        : undefined;
+  const where = parsedPublished === undefined ? {} : { isPublished: parsedPublished };
 
   const [items, total] = await Promise.all([
     prisma.caseStudy.findMany({
       where,
       skip,
-      take: limit,
+      take: limitNum,
       orderBy: { createdAt: 'desc' },
     }),
     prisma.caseStudy.count({ where }),
   ]);
 
-  return { items: items as AdminCaseStudyDTO[], page, limit, total };
+  return { items: items as AdminCaseStudyDTO[], page: pageNum, limit: limitNum, total };
 };
 
 // POST /admin/case-studies — creates a draft (unless isPublished explicitly

@@ -5,6 +5,9 @@ vi.mock('../../src/config/db.js', () => ({
     admin: {
       findUnique: vi.fn(),
     },
+    user: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 
@@ -52,11 +55,16 @@ describe('adminAuth.service', () => {
       const result = await authenticateAdmin('admin@example.com', 'validpassword123');
 
       expect(result.token).toBe('signed-jwt-token');
-      expect(result.admin).toEqual({ id: validAdminRow.id, email: validAdminRow.email });
+      expect(result.admin).toMatchObject({
+        id: validAdminRow.id,
+        email: validAdminRow.email,
+        role: 'ADMIN',
+      });
     });
 
     it('throws ApiError(401, "Invalid email or password") when the email does not exist', async () => {
       vi.mocked(prisma.admin.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
       mockedCompare.mockResolvedValue(false);
 
       await expect(authenticateAdmin('nobody@example.com', 'anypassword')).rejects.toMatchObject({
@@ -77,6 +85,7 @@ describe('adminAuth.service', () => {
 
     it('still calls bcrypt.compare against a dummy hash when the email is not found (timing hardening)', async () => {
       vi.mocked(prisma.admin.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
       mockedCompare.mockResolvedValue(false);
 
       await expect(authenticateAdmin('nobody@example.com', 'anypassword')).rejects.toThrow();
@@ -84,7 +93,7 @@ describe('adminAuth.service', () => {
       expect(bcrypt.compare).toHaveBeenCalled();
     });
 
-    it('issues a token signed with the correct admin id', async () => {
+    it('issues a token signed with the correct admin id and role', async () => {
       vi.mocked(prisma.admin.findUnique).mockResolvedValue(validAdminRow);
       mockedCompare.mockResolvedValue(true);
       vi.mocked(generateToken).mockReturnValue('signed-jwt-token');
@@ -92,7 +101,7 @@ describe('adminAuth.service', () => {
       await authenticateAdmin('admin@example.com', 'validpassword123');
 
       const payloadArg = vi.mocked(generateToken).mock.calls[0][0];
-      expect(payloadArg).toMatchObject({ id: validAdminRow.id });
+      expect(payloadArg).toMatchObject({ id: validAdminRow.id, role: 'ADMIN' });
     });
 
     it('never includes the password/hash field in the resolved admin object', async () => {
@@ -103,7 +112,7 @@ describe('adminAuth.service', () => {
       const result = await authenticateAdmin('admin@example.com', 'validpassword123');
 
       expect(result.admin).not.toHaveProperty('password');
-      expect(Object.keys(result.admin).sort()).toEqual(['email', 'id']);
+      expect(Object.keys(result.admin).sort()).toEqual(['createdAt', 'email', 'id', 'role']);
     });
   });
 

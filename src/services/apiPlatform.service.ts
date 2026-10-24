@@ -58,9 +58,11 @@ export class ApiPlatformService {
       id: apiKey.id,
       name: apiKey.name,
       keyPrefix: apiKey.keyPrefix,
+      keyPlaintext: secretKey,
       secretKey, // Unhashed secret returned strictly once
       tier: apiKey.tier,
       rateLimitRpm: apiKey.rateLimitRpm,
+      rpmLimit: apiKey.rateLimitRpm,
       expiresAt: apiKey.expiresAt,
       createdAt: apiKey.createdAt,
     };
@@ -72,7 +74,7 @@ export class ApiPlatformService {
   async listApiKeys(userId: string, orgId?: string) {
     const where: any = orgId ? { orgId } : { userId };
 
-    return prisma.apiKey.findMany({
+    const keys = await prisma.apiKey.findMany({
       where,
       select: {
         id: true,
@@ -88,6 +90,11 @@ export class ApiPlatformService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return keys.map((k) => ({
+      ...k,
+      rpmLimit: k.rateLimitRpm,
+    }));
   }
 
   /**
@@ -249,7 +256,7 @@ export class ApiPlatformService {
   }
 
   /**
-   * Get metered usage summary for a user's API keys.
+   * Get metered usage summary for a user's API keys matching frontend ApiUsage contract.
    */
   async getUsageSummary(userId: string) {
     const keys = await prisma.apiKey.findMany({
@@ -265,20 +272,63 @@ export class ApiPlatformService {
     });
 
     const keyIds = keys.map((k) => k.id);
-    const totalCalls = await prisma.apiUsage.count({
-      where: { apiKeyId: { in: keyIds } },
-    });
+    const activeKeys = keys.filter((k) => k.isActive);
+    const rpmLimit =
+      activeKeys.length > 0 ? Math.max(...activeKeys.map((k) => k.rateLimitRpm)) : 60;
+
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const [totalCalls, recentCalls] = await Promise.all([
+      prisma.apiUsage.count({
+        where: { apiKeyId: { in: keyIds } },
+      }),
+      prisma.apiUsage.count({
+        where: {
+          apiKeyId: { in: keyIds },
+          createdAt: { gte: oneMinuteAgo },
+        },
+      }),
+    ]);
+
+    const remainingRpm = Math.max(0, rpmLimit - recentCalls);
+
+    // Compute last 7 days daily usage
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentUsages =
+      (await prisma.apiUsage.findMany({
+        where: {
+          apiKeyId: { in: keyIds },
+          createdAt: { gte: sevenDaysAgo },
+        },
+        select: { createdAt: true },
+      })) || [];
+
+    const dailyMap = new Map<string, number>();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const dateKey = d.toISOString().split('T')[0];
+      dailyMap.set(dateKey, 0);
+    }
+
+    for (const u of recentUsages) {
+      const dateKey = u.createdAt.toISOString().split('T')[0];
+      dailyMap.set(dateKey, (dailyMap.get(dateKey) || 0) + 1);
+    }
+
+    const dailyUsage = Array.from(dailyMap.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
 
     return {
-      totalKeys: keys.length,
+      totalRequests: totalCalls,
       totalCalls,
+      remainingRpm,
+      rpmLimit,
+      dailyUsage,
+      totalKeys: keys.length,
       keys: keys.map((k) => ({
-        id: k.id,
-        name: k.name,
-        keyPrefix: k.keyPrefix,
-        tier: k.tier,
-        rateLimitRpm: k.rateLimitRpm,
-        isActive: k.isActive,
+        ...k,
+        rpmLimit: k.rateLimitRpm,
       })),
     };
   }

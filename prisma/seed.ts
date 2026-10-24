@@ -74,19 +74,31 @@ async function main(): Promise<void> {
   });
   console.log(`Admin upserted: ${admin.email}`);
 
-  // Seed unified User table with ADMIN role for V2-V4 unified authentication
-  const adminUser = await prisma.user.upsert({
-    where: { email: ADMIN_SEED_EMAIL },
-    update: { password: hashedPassword, role: 'ADMIN', isEmailVerified: true },
+  // Seed default admin account (admin@ecolens.org / Admin123!)
+  const defaultAdminEmail = 'admin@ecolens.org';
+  const defaultAdminPassword = await bcrypt.hash('Admin123!', saltRounds);
+
+  await prisma.admin.upsert({
+    where: { email: defaultAdminEmail },
+    update: { password: defaultAdminPassword },
     create: {
-      email: ADMIN_SEED_EMAIL,
-      password: hashedPassword,
+      email: defaultAdminEmail,
+      password: defaultAdminPassword,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: defaultAdminEmail },
+    update: { password: defaultAdminPassword, role: 'ADMIN', isEmailVerified: true },
+    create: {
+      email: defaultAdminEmail,
+      password: defaultAdminPassword,
       role: 'ADMIN',
-      fullName: 'System Administrator',
+      fullName: 'EcoLens Administrator',
       isEmailVerified: true,
     },
   });
-  console.log(`Unified Admin User upserted: ${adminUser.email}`);
+  console.log(`Default Administrator upserted: ${defaultAdminEmail}`);
 
   for (const source of DATA_SOURCES) {
     const dataSource = await prisma.dataSource.upsert({

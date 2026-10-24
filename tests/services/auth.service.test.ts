@@ -220,5 +220,28 @@ describe('auth.service', () => {
       expect(updated.phoneNumber).toBe('+251911223344');
       expect(updated.telegramHandle).toBe('@me_analyst');
     });
+
+    it('retrieves user profile with active subscription plan status', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'analyst@example.com',
+        role: 'USER',
+        fullName: 'Analyst User',
+        subscription: {
+          id: 'sub-1',
+          status: 'ACTIVE',
+          plan: {
+            id: 'plan-1',
+            name: 'Analyst Pro',
+          },
+        },
+      });
+
+      const profile = await getProfile('user-2');
+      expect(profile.plan).toBe('Analyst Pro');
+      expect(profile.planTier).toBe('PRO');
+      expect(profile.planStatus).toBe('ACTIVE');
+      expect(profile.subscription?.plan?.name).toBe('Analyst Pro');
+    });
   });
 });

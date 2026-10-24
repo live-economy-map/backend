@@ -72,12 +72,22 @@ export const adminUploadDeliverableSchema = z.object({
   params: z.object({
     id: z.string().uuid('Valid report request UUID is required'),
   }),
-  body: z.object({
-    fileUrl: z.string().url('Valid file URL is required'),
-    fileName: z.string().trim().min(1, 'File name is required').max(255),
-    fileSizeBytes: z.number().int().positive('File size in bytes must be positive'),
-    mimeType: z.string().trim().min(1, 'MIME type is required').max(100),
-  }),
+  body: z
+    .object({
+      fileUrl: z.string().url('Valid file URL is required'),
+      fileName: z.string().trim().min(1, 'File name is required').max(255),
+      fileSizeBytes: z.number().int().positive().optional(),
+      fileSizeMb: z.number().positive().optional(),
+      mimeType: z.string().trim().max(100).default('application/pdf'),
+    })
+    .transform((data) => ({
+      fileUrl: data.fileUrl,
+      fileName: data.fileName,
+      fileSizeBytes:
+        data.fileSizeBytes ??
+        (data.fileSizeMb ? Math.round(data.fileSizeMb * 1024 * 1024) : 1048576),
+      mimeType: data.mimeType || 'application/pdf',
+    })),
 });
 
 export const adminReportRequestsQuerySchema = z.object({
