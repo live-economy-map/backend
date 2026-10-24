@@ -57,6 +57,32 @@ enum ContactPreference {
   TELEGRAM
 }
 
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum DraftStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  DELIVERED
+}
+
 // ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
@@ -130,6 +156,7 @@ model GridCell {
   compositeScoreSnapshots  CompositeScoreSnapshot[]
   caseStudies              CaseStudy[]
   savedAreas               SavedArea[]
+  alertRules               AlertRule[]
 
   @@unique([cellRow, cellCol])
 }
@@ -251,6 +278,10 @@ model User {
   assignedReportRequests ReportRequest[]       @relation("AdminAssignedRequests")
   requestEvents          ReportRequestEvent[]  @relation("ActorRequestEvents")
   uploadedDeliverables   ReportDeliverable[]   @relation("AdminUploadedDeliverables")
+  subscription           Subscription?
+  alertRules             AlertRule[]
+  notifications          Notification[]
+  reviewedDrafts         ReportDraft[]         @relation("AdminReviewedDrafts")
 
   @@index([role])
   @@index([isEmailVerified])
@@ -303,6 +334,7 @@ model ReportRequest {
 
   events       ReportRequestEvent[]
   deliverables ReportDeliverable[]
+  drafts       ReportDraft[]
 
   @@index([userId])
   @@index([status])
@@ -336,4 +368,111 @@ model ReportDeliverable {
   createdAt     DateTime      @default(now())
 
   @@index([requestId])
-}
+}
+
+// ─────────────────────────────────────────────
+// V3 Models — Monetization, Alerts & AI Drafts
+// ─────────────────────────────────────────────
+
+model Plan {
+  id              String        @id @default(uuid())
+  name            String        @unique // e.g., "Free", "Analyst Pro", "Enterprise"
+  priceEtb        Int           // Stored in ETB cents (e.g., 50000 = 500.00 ETB)
+  interval        PlanInterval  @default(MONTHLY)
+  canExport       Boolean       @default(false)
+  canAlert        Boolean       @default(false)
+  priorityReports Boolean       @default(false)
+  maxAlerts       Int           @default(0)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status             SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  payments           Payment[]
+  exportLogs         ExportLog[]
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  txRef          String        @unique
+  amountEtb      Int
+  status         PaymentStatus @default(PENDING)
+  rawWebhookJson Json?
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([txRef])
+  @@index([status])
+}
+
+model AlertRule {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gridCellId      String
+  gridCell        GridCell  @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  thresholdDelta  Float     // score delta trigger, e.g. 0.15
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, gridCellId])
+  @@index([isActive])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model ReportDraft {
+  id           String        @id @default(uuid())
+  requestId    String
+  request      ReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  aiModel      String        // e.g. "llama-3.3-70b-versatile"
+  draftContent String        // Markdown generated draft
+  status       DraftStatus   @default(DRAFT)
+  reviewerId   String?
+  reviewer     User?         @relation("AdminReviewedDrafts", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNotes  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model ExportLog {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  format         String       // "CSV" | "JSON"
+  cellCount      Int
+  createdAt      DateTime     @default(now())
+}
+
