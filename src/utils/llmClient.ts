@@ -4,11 +4,16 @@ import { env } from '../config/env.js';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 export interface LLMResponse {
   content: string;
 }
 
-export const callLLM = async (prompt: string): Promise<LLMResponse> => {
+export const callLLMChat = async (messages: ChatMessage[]): Promise<LLMResponse> => {
   const apiKey = (env.GROQ_KEY || env.LLM_API_KEY || '').trim();
 
   try {
@@ -16,7 +21,7 @@ export const callLLM = async (prompt: string): Promise<LLMResponse> => {
       GROQ_API_URL,
       {
         model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages,
         temperature: 0.3,
       },
       {
@@ -51,4 +56,8 @@ export const callLLM = async (prompt: string): Promise<LLMResponse> => {
     connectionError.name = 'ConnectionError';
     throw connectionError;
   }
+};
+
+export const callLLM = async (prompt: string): Promise<LLMResponse> => {
+  return callLLMChat([{ role: 'user', content: prompt }]);
 };

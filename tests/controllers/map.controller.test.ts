@@ -8,6 +8,7 @@ vi.mock('../../src/services/map.service.js', () => ({
   getCellDetail: vi.fn(),
   getRawSignalLayer: vi.fn(),
   parseNaturalLanguageQuery: vi.fn(),
+  chatWithCell: vi.fn(),
 }));
 
 import * as mapService from '../../src/services/map.service.js';
@@ -16,6 +17,7 @@ import {
   getCellDetail as getCellDetailHandler,
   getRawLayer,
   searchMap,
+  chatCell,
 } from '../../src/controllers/map.controller.js';
 
 function mockRes(): Response {
@@ -161,6 +163,38 @@ describe('map.controller', () => {
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({ statusCode: 400, message: 'Search is temporarily unavailable' }),
+      );
+    });
+  });
+
+  describe('chatCell', () => {
+    it('delegates to mapService.chatWithCell and responds 200 with reply', async () => {
+      const mockResult = {
+        reply: 'Solid candidate for retail development.',
+        cellId: 'cell-1',
+        areaLabel: 'Bole',
+        compositeScore: 0.85,
+        trend: 'up',
+      };
+      (mapService.chatWithCell as any).mockResolvedValue(mockResult);
+
+      const req = {
+        params: { cellId: 'cell-1' },
+        body: { message: 'Is retail good here?', history: [] },
+      } as unknown as Request;
+      const res = mockRes();
+      const next = vi.fn() as NextFunction;
+
+      await chatCell(req, res, next);
+
+      expect(mapService.chatWithCell).toHaveBeenCalledWith('cell-1', 'Is retail good here?', []);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 200,
+          message: 'AI reply generated',
+          data: mockResult,
+        }),
       );
     });
   });

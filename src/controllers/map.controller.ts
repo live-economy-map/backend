@@ -50,3 +50,16 @@ export const getPeriods = async (req: Request, res: Response, next: NextFunction
     data: result,
   });
 };
+
+export const chatCell = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { cellId } = req.params as any;
+  const { message, history } = req.body as any;
+  try {
+    const result = await mapService.chatWithCell(cellId, message, history);
+    res
+      .status(HTTP_STATUS.OK)
+      .json(new SuccessResponse(HTTP_STATUS.OK, 'AI reply generated', result));
+  } catch (error) {
+    next(error);
+  }
+});

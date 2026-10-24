@@ -16,6 +16,24 @@ export const generateText = async (prompt: string): Promise<string> => {
   return content;
 };
 
+export const generateChatReply = async (
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+): Promise<string> => {
+  if (!messages || messages.length === 0) {
+    throw new Error('Messages must not be empty');
+  }
+
+  const { callLLMChat } = await import('./llmClient.js');
+  const response = await callLLMChat(messages);
+  const content = response?.content?.trim() ?? '';
+
+  if (content.length === 0) {
+    throw new Error('LLM returned an empty response');
+  }
+
+  return content;
+};
+
 export const generateStructuredOutput = async <T>(
   prompt: string,
   schema: z.ZodType<T>,

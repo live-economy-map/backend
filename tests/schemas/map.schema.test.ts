@@ -4,6 +4,7 @@ import {
   getCellDetailParamsSchema,
   getRawLayerParamsSchema,
   searchMapBodySchema,
+  chatCellSchema,
 } from '../../src/schemas/map.schema.js';
 
 describe('map.schema', () => {
@@ -77,6 +78,35 @@ describe('map.schema', () => {
         body: { query: 'areas near Bole with rising construction' },
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('chatCellSchema', () => {
+    it('accepts valid message and history', () => {
+      const result = chatCellSchema.safeParse({
+        params: { cellId: '123e4567-e89b-12d3-a456-426614174000' },
+        body: {
+          message: 'Is retail suitable here?',
+          history: [{ role: 'user', content: 'hello' }],
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty message', () => {
+      const result = chatCellSchema.safeParse({
+        params: { cellId: '123e4567-e89b-12d3-a456-426614174000' },
+        body: { message: '' },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid cellId UUID', () => {
+      const result = chatCellSchema.safeParse({
+        params: { cellId: 'invalid-uuid' },
+        body: { message: 'hello' },
+      });
+      expect(result.success).toBe(false);
     });
   });
 });

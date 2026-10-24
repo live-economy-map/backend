@@ -1,6 +1,6 @@
 // src/services/map.service.ts
 import { prisma } from '../config/db.js';
-import { generateText, generateStructuredOutput } from '../utils/aiClient.js';
+import { generateText, generateStructuredOutput, generateChatReply } from '../utils/aiClient.js';
 import ApiError from '../utils/ApiError.js';
 import { HTTP_STATUS } from '../constants/index.js';
 import { z } from 'zod';
@@ -456,5 +456,77 @@ export const getAvailablePeriods = async (): Promise<{
     earliest: periods[0],
     latest: periods[periods.length - 1],
     all: periods,
+  };
+};
+
+export const chatWithCell = async (
+  cellId: string,
+  message: string,
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+) => {
+  // 1. Fetch cell detail and grounded signals
+  const cellDetail = await getCellDetail(cellId);
+
+  const viirs = cellDetail.signals.find((s) => s.source === 'VIIRS');
+  const ghsl = cellDetail.signals.find((s) => s.source === 'GHSL');
+  const rwi = cellDetail.signals.find((s) => s.source === 'RWI');
+  const gdelt = cellDetail.signals.find((s) => s.source === 'GDELT');
+
+  const locationName = cellDetail.areaLabel
+    ? `"${cellDetail.areaLabel}"`
+    : `Sector ${cellId.slice(0, 8)}`;
+  const sparklineSummary = cellDetail.sparkline
+    .map((s) => `${s.period}: ${s.compositeScore}`)
+    .join(', ');
+
+  // 2. Build system prompt grounded in empirical spatial telemetry
+  const systemPrompt = `You are the Spatial Economics AI Assistant for Live Economy Map.
+The user is inspecting a specific geographic sector on the live map and asking questions about it.
+
+GROUND TRUTH DATA FOR THIS SECTOR:
+- Location / Area Label: ${locationName}
+- Current Composite Economic Score: ${cellDetail.compositeScore} / 100 (Scale 0-100, where 100 is peak economic vitality)
+- Recent Trend Momentum: ${cellDetail.trend.toUpperCase()} (Upward expansion, downward cooling, or flat equilibrium)
+- Historical Scores (6 months): ${sparklineSummary}
+
+DETAILED MULTI-SOURCE TELEMETRY SIGNALS:
+1. VIIRS (Nighttime Lights): Normalized=${viirs?.normalizedValue ?? 0}, Raw=${viirs?.rawValue ?? 0}
+   -> Measures nocturnal commercial vitality, active evening trade, nightlife, and electrification.
+2. GHSL (Global Human Settlement Layer): Normalized=${ghsl?.normalizedValue ?? 0}, Raw=${ghsl?.rawValue ?? 0}
+   -> Measures physical urbanization, building volume, population density, and built infrastructure.
+3. RWI (Relative Wealth Index): Normalized=${rwi?.normalizedValue ?? 0}, Raw=${rwi?.rawValue ?? 0}
+   -> Measures micro-estimate of household asset wealth and consumer purchasing power.
+4. GDELT (Global Database of Events, Language, and Tone): Normalized=${gdelt?.normalizedValue ?? 0}, Raw=${gdelt?.rawValue ?? 0}
+   -> Measures public media sentiment and local economic/infrastructure event coverage.
+
+INSTRUCTIONS:
+1. Always base your analysis and conclusions directly on this sector's ground truth signals above.
+2. Be conversational, natural, insightful, and practical (e.g. advise on business viability, foot traffic, investment potential, or urban growth).
+3. Do not just regurgitate raw numbers; explain what the numbers mean for the user's specific question.
+4. Keep answers concise, punchy, and direct (between 2 to 4 sentences or under 100 words unless the user explicitly requests a comprehensive breakdown).
+5. If asked about something outside economic activity, urban planning, or this location's data, politely redirect back to spatial economic insights.`;
+
+  const chatMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompt },
+  ];
+
+  if (history && Array.isArray(history)) {
+    for (const msg of history.slice(-10)) {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        chatMessages.push({ role: msg.role, content: msg.content });
+      }
+    }
+  }
+
+  chatMessages.push({ role: 'user', content: message });
+
+  const reply = await generateChatReply(chatMessages);
+
+  return {
+    reply: reply.trim(),
+    cellId,
+    areaLabel: cellDetail.areaLabel,
+    compositeScore: cellDetail.compositeScore,
+    trend: cellDetail.trend,
   };
 };
