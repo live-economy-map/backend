@@ -24,6 +24,26 @@ describe('reportRequests.schema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts optional phoneNumber and telegramHandle', () => {
+      const input = {
+        body: {
+          title: 'Infrastructure Assessment',
+          questionPrompt: 'Evaluate corridor freight logistics activity',
+          areaCellIds: ['123e4567-e89b-12d3-a456-426614174000'],
+          contactPreference: 'TELEGRAM',
+          phoneNumber: '+251911223344',
+          telegramHandle: '@tele_analyst',
+        },
+      };
+
+      const result = createReportRequestSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.body.phoneNumber).toBe('+251911223344');
+        expect(result.data.body.telegramHandle).toBe('@tele_analyst');
+      }
+    });
+
     it('rejects short title or empty areaCellIds', () => {
       const input = {
         body: {

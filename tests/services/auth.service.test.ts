@@ -191,10 +191,14 @@ describe('auth.service', () => {
         email: 'me@example.com',
         role: 'USER',
         fullName: 'Me',
+        phoneNumber: '+251911223344',
+        telegramHandle: '@me_analyst',
       });
 
       const profile = await getProfile('user-1');
       expect(profile.email).toBe('me@example.com');
+      expect(profile.phoneNumber).toBe('+251911223344');
+      expect(profile.telegramHandle).toBe('@me_analyst');
     });
 
     it('updates user profile fields', async () => {
@@ -202,13 +206,19 @@ describe('auth.service', () => {
         id: 'user-1',
         fullName: 'Updated Name',
         organizationName: 'New Org',
+        phoneNumber: '+251911223344',
+        telegramHandle: '@me_analyst',
       });
 
       const updated = await updateProfile('user-1', {
         fullName: 'Updated Name',
         organizationName: 'New Org',
+        phoneNumber: '+251911223344',
+        telegramHandle: '@me_analyst',
       });
       expect(updated.fullName).toBe('Updated Name');
+      expect(updated.phoneNumber).toBe('+251911223344');
+      expect(updated.telegramHandle).toBe('@me_analyst');
     });
   });
 });

@@ -9,11 +9,23 @@ export interface EmailOptions {
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  // In development / test, log the email action
+  // In development / test, log the email action and output direct URL to terminal
   logger.info(
     { to: options.to, subject: options.subject },
     `[Transactional Email] Sending email to ${options.to}: "${options.subject}"`,
   );
+
+  if (env.NODE_ENV !== 'production') {
+    console.log('\n================================================================');
+    console.log('📧 [DEV TRANSACTIONAL EMAIL]');
+    console.log(`📬 To:      ${options.to}`);
+    console.log(`📌 Subject: ${options.subject}`);
+    if (options.text) {
+      console.log(`🔗 Link/Body: ${options.text}`);
+    }
+    console.log('================================================================\n');
+  }
+
   return true;
 };
 

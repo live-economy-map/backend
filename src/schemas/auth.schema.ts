@@ -6,6 +6,8 @@ export const registerSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     fullName: z.string().trim().min(1, 'Full name cannot be empty').optional(),
     organizationName: z.string().trim().min(1, 'Organization name cannot be empty').optional(),
+    phoneNumber: z.string().trim().min(1, 'Phone number cannot be empty').optional(),
+    telegramHandle: z.string().trim().min(1, 'Telegram handle cannot be empty').optional(),
   }),
 });
 
@@ -51,10 +53,19 @@ export const updateProfileSchema = z.object({
     .object({
       fullName: z.string().trim().min(1).optional(),
       organizationName: z.string().trim().min(1).optional(),
+      phoneNumber: z.string().trim().nullable().optional(),
+      telegramHandle: z.string().trim().nullable().optional(),
     })
-    .refine((data) => data.fullName !== undefined || data.organizationName !== undefined, {
-      message: 'At least one field (fullName or organizationName) must be provided for update',
-    }),
+    .refine(
+      (data) =>
+        data.fullName !== undefined ||
+        data.organizationName !== undefined ||
+        data.phoneNumber !== undefined ||
+        data.telegramHandle !== undefined,
+      {
+        message: 'At least one field must be provided for update',
+      },
+    ),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>['body'];

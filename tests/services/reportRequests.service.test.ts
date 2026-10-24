@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/config/db.js', () => ({
   prisma: {
+    user: {
+      findUnique: vi.fn(),
+    },
     gridCell: {
       findMany: vi.fn(),
     },
@@ -69,6 +72,36 @@ describe('reportRequests.service', () => {
 
       expect(result.id).toBe('req-1');
       expect(mockPrisma.reportRequest.create).toHaveBeenCalled();
+    });
+
+    it('creates request and propagates phoneNumber and telegramHandle', async () => {
+      mockPrisma.gridCell.findMany.mockResolvedValue([{ id: 'c-1' }]);
+      mockPrisma.reportRequest.create.mockResolvedValue({
+        id: 'req-2',
+        title: 'Title 2',
+        phoneNumber: '+251911223344',
+        telegramHandle: '@tele_analyst',
+        status: 'SUBMITTED',
+      });
+
+      const result = await createReportRequest('user-1', {
+        title: 'Title 2',
+        questionPrompt: 'Detailed Prompt Text',
+        areaCellIds: ['c-1'],
+        contactPreference: 'PHONE',
+        phoneNumber: '+251911223344',
+        telegramHandle: '@tele_analyst',
+      });
+
+      expect(result.id).toBe('req-2');
+      expect(mockPrisma.reportRequest.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            phoneNumber: '+251911223344',
+            telegramHandle: '@tele_analyst',
+          }),
+        }),
+      );
     });
 
     it('throws 400 when one or more cells do not exist', async () => {

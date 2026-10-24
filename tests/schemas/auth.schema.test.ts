@@ -118,7 +118,22 @@ describe('auth.schema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects when both fields are empty/omitted', () => {
+    it('accepts phoneNumber and telegramHandle updates', () => {
+      const input = {
+        body: {
+          phoneNumber: '+251911223344',
+          telegramHandle: '@ethio_analyst',
+        },
+      };
+      const result = updateProfileSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.body.phoneNumber).toBe('+251911223344');
+        expect(result.data.body.telegramHandle).toBe('@ethio_analyst');
+      }
+    });
+
+    it('rejects when all fields are empty/omitted', () => {
       const input = { body: {} };
       const result = updateProfileSchema.safeParse(input);
       expect(result.success).toBe(false);

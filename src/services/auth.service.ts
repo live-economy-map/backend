@@ -37,6 +37,8 @@ export const registerUser = async (input: RegisterInput) => {
       role: 'USER',
       fullName: input.fullName,
       organizationName: input.organizationName,
+      phoneNumber: input.phoneNumber,
+      telegramHandle: input.telegramHandle,
       isEmailVerified: false,
       emailTokens: {
         create: {
@@ -52,6 +54,8 @@ export const registerUser = async (input: RegisterInput) => {
       role: true,
       fullName: true,
       organizationName: true,
+      phoneNumber: true,
+      telegramHandle: true,
       isEmailVerified: true,
       createdAt: true,
     },
@@ -95,6 +99,8 @@ export const loginUser = async (input: LoginInput) => {
       role: user.role,
       fullName: user.fullName,
       organizationName: user.organizationName,
+      phoneNumber: user.phoneNumber,
+      telegramHandle: user.telegramHandle,
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
     },
@@ -202,6 +208,8 @@ export const getProfile = async (userId: string) => {
       role: true,
       fullName: true,
       organizationName: true,
+      phoneNumber: true,
+      telegramHandle: true,
       isEmailVerified: true,
       createdAt: true,
       updatedAt: true,
@@ -221,6 +229,8 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
     data: {
       ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
       ...(input.organizationName !== undefined ? { organizationName: input.organizationName } : {}),
+      ...(input.phoneNumber !== undefined ? { phoneNumber: input.phoneNumber } : {}),
+      ...(input.telegramHandle !== undefined ? { telegramHandle: input.telegramHandle } : {}),
     },
     select: {
       id: true,
@@ -228,6 +238,8 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
       role: true,
       fullName: true,
       organizationName: true,
+      phoneNumber: true,
+      telegramHandle: true,
       isEmailVerified: true,
       createdAt: true,
       updatedAt: true,

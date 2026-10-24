@@ -23,6 +23,21 @@ export const createReportRequest = async (userId: string, input: CreateReportReq
     );
   }
 
+  // Resolve phone number and telegram handle, defaulting to user profile if not passed
+  let phoneNumber = input.phoneNumber;
+  let telegramHandle = input.telegramHandle;
+
+  if (!phoneNumber || !telegramHandle) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { phoneNumber: true, telegramHandle: true },
+    });
+    if (user) {
+      if (!phoneNumber && user.phoneNumber) phoneNumber = user.phoneNumber;
+      if (!telegramHandle && user.telegramHandle) telegramHandle = user.telegramHandle;
+    }
+  }
+
   // Create report request with initial SUBMITTED event
   const createdRequest = await prisma.reportRequest.create({
     data: {
@@ -32,6 +47,8 @@ export const createReportRequest = async (userId: string, input: CreateReportReq
       areaCellIds: input.areaCellIds,
       orgType: input.orgType,
       contactPreference: input.contactPreference,
+      phoneNumber,
+      telegramHandle,
       status: 'SUBMITTED',
       events: {
         create: {
@@ -90,6 +107,8 @@ export const getUserReportRequest = async (
           email: true,
           fullName: true,
           organizationName: true,
+          phoneNumber: true,
+          telegramHandle: true,
         },
       },
       assignedAdmin: {
@@ -155,6 +174,8 @@ export const adminListReportRequests = async (query: AdminReportRequestsQuery) =
             email: true,
             fullName: true,
             organizationName: true,
+            phoneNumber: true,
+            telegramHandle: true,
           },
         },
         assignedAdmin: {
@@ -221,6 +242,8 @@ export const adminUpdateReportRequest = async (
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.assignedAdminId !== undefined ? { assignedAdminId: input.assignedAdminId } : {}),
         ...(input.internalNotes !== undefined ? { internalNotes: input.internalNotes } : {}),
+        ...(input.phoneNumber !== undefined ? { phoneNumber: input.phoneNumber } : {}),
+        ...(input.telegramHandle !== undefined ? { telegramHandle: input.telegramHandle } : {}),
       },
       include: {
         events: { orderBy: { createdAt: 'desc' }, take: 5 },

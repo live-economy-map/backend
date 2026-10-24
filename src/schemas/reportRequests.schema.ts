@@ -23,6 +23,8 @@ export const createReportRequestSchema = z.object({
       .max(50, 'Cannot exceed 50 cells in a single request'),
     orgType: z.string().trim().max(100).optional(),
     contactPreference: z.enum(CONTACT_PREFERENCES).default('EMAIL'),
+    phoneNumber: z.string().trim().optional(),
+    telegramHandle: z.string().trim().optional(),
   }),
 });
 
@@ -43,13 +45,17 @@ export const adminUpdateReportRequestSchema = z.object({
       assignedAdminId: z.string().uuid().nullable().optional(),
       internalNotes: z.string().trim().max(2000).optional(),
       statusChangeNote: z.string().trim().max(500).optional(),
+      phoneNumber: z.string().trim().nullable().optional(),
+      telegramHandle: z.string().trim().nullable().optional(),
     })
     .refine(
       (data) =>
         data.status !== undefined ||
         data.priority !== undefined ||
         data.assignedAdminId !== undefined ||
-        data.internalNotes !== undefined,
+        data.internalNotes !== undefined ||
+        data.phoneNumber !== undefined ||
+        data.telegramHandle !== undefined,
       {
         message: 'At least one field must be provided for update',
       },
