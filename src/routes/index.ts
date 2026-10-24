@@ -5,6 +5,7 @@ import contentRoutes from './content.routes.js';
 import adminAuthRoutes from './adminAuth.routes.js';
 import adminPipelineRoutes from './adminPipeline.routes.js';
 import adminCaseStudiesRoutes from './adminCaseStudies.routes.js';
+import adminReportRequestsRoutes from './adminReportRequests.routes.js';
 import authRoutes from './auth.routes.js';
 import meRoutes from './me.routes.js';
 
@@ -18,5 +19,6 @@ router.use('/content', contentRoutes);
 router.use('/admin/auth', adminAuthRoutes);
 router.use('/admin/pipeline', adminPipelineRoutes);
 router.use('/admin/case-studies', adminCaseStudiesRoutes);
+router.use('/admin', adminReportRequestsRoutes);
 
 export default router;
