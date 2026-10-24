@@ -74,6 +74,20 @@ async function main(): Promise<void> {
   });
   console.log(`Admin upserted: ${admin.email}`);
 
+  // Seed unified User table with ADMIN role for V2-V4 unified authentication
+  const adminUser = await prisma.user.upsert({
+    where: { email: ADMIN_SEED_EMAIL },
+    update: { password: hashedPassword, role: 'ADMIN', isEmailVerified: true },
+    create: {
+      email: ADMIN_SEED_EMAIL,
+      password: hashedPassword,
+      role: 'ADMIN',
+      fullName: 'System Administrator',
+      isEmailVerified: true,
+    },
+  });
+  console.log(`Unified Admin User upserted: ${adminUser.email}`);
+
   for (const source of DATA_SOURCES) {
     const dataSource = await prisma.dataSource.upsert({
       where: { key: source.key },
@@ -88,6 +102,49 @@ async function main(): Promise<void> {
       },
     });
     console.log(`DataSource upserted: ${dataSource.key}`);
+  }
+
+  // Seed Default Subscription Plans
+  const PLANS = [
+    {
+      name: 'Free',
+      priceEtb: 0,
+      interval: 'MONTHLY' as const,
+      canExport: false,
+      canAlert: false,
+      priorityReports: false,
+      maxAlerts: 0,
+      isActive: true,
+    },
+    {
+      name: 'Analyst Pro',
+      priceEtb: 250000, // 2,500.00 ETB
+      interval: 'MONTHLY' as const,
+      canExport: true,
+      canAlert: true,
+      priorityReports: true,
+      maxAlerts: 10,
+      isActive: true,
+    },
+    {
+      name: 'Institutional Enterprise',
+      priceEtb: 1500000, // 15,000.00 ETB
+      interval: 'MONTHLY' as const,
+      canExport: true,
+      canAlert: true,
+      priorityReports: true,
+      maxAlerts: 50,
+      isActive: true,
+    },
+  ];
+
+  for (const p of PLANS) {
+    const plan = await prisma.plan.upsert({
+      where: { name: p.name },
+      update: p,
+      create: p,
+    });
+    console.log(`Plan upserted: ${plan.name} (${plan.priceEtb / 100} ETB)`);
   }
 }
 

@@ -19,7 +19,10 @@ function getLastNMonths(n: number): Date[] {
 }
 
 async function main() {
-  const admin = await prisma.admin.findUnique({ where: { email: 'test@example.com' } });
+  const admin =
+    (await prisma.admin.findUnique({
+      where: { email: process.env.ADMIN_SEED_EMAIL || 'admin@example.com' },
+    })) || (await prisma.admin.findFirst());
   if (!admin) throw new Error('No admin found — run `npm run prisma:seed` first.');
 
   const sources = await prisma.dataSource.findMany({

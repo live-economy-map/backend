@@ -23,7 +23,8 @@ export const registerUser = async (input: RegisterInput) => {
     throw new ApiError(HTTP_STATUS.CONFLICT, 'Email is already registered');
   }
 
-  const hashedPassword = await bcrypt.hash(input.password, env.BCRYPT_SALT_ROUNDS);
+  const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS, 10) || 10;
+  const hashedPassword = await bcrypt.hash(input.password, saltRounds);
 
   const rawVerificationToken = randomUUID();
   const tokenHash = hashToken(rawVerificationToken);
@@ -175,7 +176,8 @@ export const resetPassword = async (rawToken: string, newPassword: string) => {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid or expired reset token');
   }
 
-  const hashedPassword = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
+  const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS, 10) || 10;
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
   await prisma.$transaction([
     prisma.emailToken.update({
