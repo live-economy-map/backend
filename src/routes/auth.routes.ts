@@ -20,6 +20,7 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/logout', authMiddleware, authController.logout);
 
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
+router.get('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 
 router.post(
   '/forgot-password',

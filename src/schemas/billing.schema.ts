@@ -1,10 +1,17 @@
 import { z } from 'zod';
 
 export const checkoutSchema = z.object({
-  body: z.object({
-    planId: z.string().uuid('Invalid plan ID format'),
-    returnUrl: z.string().url('Invalid return URL format').optional(),
-  }),
+  body: z
+    .object({
+      planId: z.string().uuid('Invalid plan ID format'),
+      returnUrl: z.string().url('Invalid return URL format').optional(),
+      successUrl: z.string().url('Invalid return URL format').optional(),
+      cancelUrl: z.string().url('Invalid return URL format').optional(),
+    })
+    .transform((data) => ({
+      ...data,
+      returnUrl: data.returnUrl || data.successUrl,
+    })),
 });
 
 export const verifyPaymentParamsSchema = z.object({

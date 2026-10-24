@@ -24,7 +24,8 @@ export const logout = asyncHandler(async (_req: AuthRequest, res: Response) => {
 });
 
 export const verifyEmail = asyncHandler(async (req, res: Response) => {
-  const result = await authService.verifyEmail(req.body.token);
+  const token = (req.body?.token || req.query?.token) as string;
+  const result = await authService.verifyEmail(token);
   res.status(HTTP_STATUS.OK).json(new SuccessResponse(HTTP_STATUS.OK, result.message, {}));
 });
 

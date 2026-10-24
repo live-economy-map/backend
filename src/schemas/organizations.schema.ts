@@ -8,6 +8,7 @@ export const createOrgSchema = z.object({
       .min(2, 'Slug must be at least 2 characters')
       .max(50)
       .regex(/^[a-z0-9-]+$/, 'Slug must be lower-case alphanumeric with dashes'),
+    billingEmail: z.string().email('Invalid billing email address').optional(),
   }),
 });
 
@@ -21,10 +22,16 @@ export const addMemberSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid organization UUID'),
   }),
-  body: z.object({
-    userId: z.string().uuid('Invalid user UUID'),
-    role: z.enum(['OWNER', 'ADMIN', 'MEMBER']).default('MEMBER'),
-  }),
+  body: z
+    .object({
+      userId: z.string().uuid('Invalid user UUID').optional(),
+      userEmail: z.string().email('Invalid email address').optional(),
+      email: z.string().email('Invalid email address').optional(),
+      role: z.enum(['OWNER', 'ADMIN', 'MEMBER']).default('MEMBER'),
+    })
+    .refine((data) => data.userId || data.userEmail || data.email, {
+      message: 'Either userId, userEmail, or email must be provided',
+    }),
 });
 
 export const removeMemberSchema = z.object({

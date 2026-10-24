@@ -4,10 +4,12 @@ export const generateDraftSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid report request UUID'),
   }),
-  body: z.object({
-    customPrompt: z.string().max(2000).optional(),
-    model: z.string().default('llama-3.3-70b-versatile'),
-  }),
+  body: z
+    .object({
+      customPrompt: z.string().max(2000).optional(),
+      model: z.string().default('llama-3.3-70b-versatile'),
+    })
+    .default({}),
 });
 
 export const getDraftParamsSchema = z.object({
@@ -35,9 +37,12 @@ export const deliverDraftSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid draft UUID'),
   }),
-  body: z.object({
-    finalNote: z.string().optional(),
-  }),
+  body: z
+    .object({
+      finalNote: z.string().optional(),
+      fileName: z.string().optional(),
+    })
+    .default({}),
 });
 
 export type GenerateDraftInput = z.infer<typeof generateDraftSchema>['body'];

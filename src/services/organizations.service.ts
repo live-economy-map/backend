@@ -140,9 +140,17 @@ export class OrganizationsService {
       );
     }
 
-    const targetUser = await prisma.user.findUnique({
-      where: { id: input.userId },
-    });
+    let targetUser;
+    if (input.userId) {
+      targetUser = await prisma.user.findUnique({
+        where: { id: input.userId },
+      });
+    } else {
+      const email = input.userEmail || input.email;
+      targetUser = await prisma.user.findUnique({
+        where: { email },
+      });
+    }
 
     if (!targetUser) {
       throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User to add not found');
@@ -152,12 +160,12 @@ export class OrganizationsService {
       where: {
         orgId_userId: {
           orgId,
-          userId: input.userId,
+          userId: targetUser.id,
         },
       },
       create: {
         orgId,
-        userId: input.userId,
+        userId: targetUser.id,
         role: input.role,
       },
       update: {

@@ -1,18 +1,32 @@
 import { z } from 'zod';
 
 export const exportDataQuerySchema = z.object({
-  query: z.object({
-    format: z.enum(['CSV', 'JSON']).default('CSV'),
-    periodStart: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
-      .optional(),
-    periodEnd: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
-      .optional(),
-    cellIds: z.string().optional(),
-  }),
+  query: z
+    .object({
+      format: z.enum(['CSV', 'JSON']).default('CSV'),
+      periodStart: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
+        .optional(),
+      periodEnd: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
+        .optional(),
+      from: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
+        .optional(),
+      to: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date (YYYY-MM-DD)')
+        .optional(),
+      cellIds: z.string().optional(),
+    })
+    .transform((data) => ({
+      ...data,
+      periodStart: data.periodStart || data.from,
+      periodEnd: data.periodEnd || data.to,
+    })),
 });
 
 export const createAlertRuleSchema = z.object({

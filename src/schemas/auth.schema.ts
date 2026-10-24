@@ -16,11 +16,22 @@ export const loginSchema = z.object({
   }),
 });
 
-export const verifyEmailSchema = z.object({
-  body: z.object({
-    token: z.string().min(1, 'Verification token is required'),
-  }),
-});
+export const verifyEmailSchema = z
+  .object({
+    body: z
+      .object({
+        token: z.string().min(1).optional(),
+      })
+      .optional(),
+    query: z
+      .object({
+        token: z.string().min(1).optional(),
+      })
+      .optional(),
+  })
+  .refine((data) => Boolean(data.body?.token || data.query?.token), {
+    message: 'Verification token is required in body or query parameters',
+  });
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
