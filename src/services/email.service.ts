@@ -53,3 +53,19 @@ export const sendRequestStatusChangeEmail = async (
     }`,
   });
 };
+
+export const sendAnomalyAlertEmail = async (
+  email: string,
+  cellLabel: string,
+  delta: number,
+  period: string,
+): Promise<boolean> => {
+  const direction = delta > 0 ? 'increase' : 'decrease';
+  const percentage = (Math.abs(delta) * 100).toFixed(1);
+  return sendEmail({
+    to: email,
+    subject: `Live Economy Map Alert: ${percentage}% economic shift in ${cellLabel}`,
+    text: `An economic anomaly was detected in ${cellLabel} for period ${period}. Composite activity shifted by ${percentage}% (${direction}).`,
+    html: `<p>An economic anomaly was detected in <strong>${cellLabel}</strong> for period <strong>${period}</strong>.</p><p>Composite activity score shifted by <strong>${percentage}%</strong> (${direction}).</p>`,
+  });
+};
