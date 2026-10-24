@@ -16,6 +16,9 @@ export const envSchema = z.object({
   LLM_API_KEY: z.string(),
   ADMIN_SEED_EMAIL: z.string(),
   ADMIN_SEED_PASSWORD: z.string(),
+  CHAPA_SECRET_KEY: z.string().default('dev_chapa_secret_key'),
+  CHAPA_WEBHOOK_SECRET: z.string().default('dev_chapa_webhook_secret'),
+  CHAPA_BASE_URL: z.string().default('https://api.chapa.co/v1'),
 });
 
 const parsed = envSchema.safeParse(process.env);

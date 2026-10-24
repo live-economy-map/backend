@@ -8,17 +8,23 @@ import adminCaseStudiesRoutes from './adminCaseStudies.routes.js';
 import adminReportRequestsRoutes from './adminReportRequests.routes.js';
 import authRoutes from './auth.routes.js';
 import meRoutes from './me.routes.js';
+import plansRoutes from './plans.routes.js';
+import billingRoutes from './billing.routes.js';
+import adminBillingRoutes from './adminBilling.routes.js';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/me', meRoutes);
+router.use('/plans', plansRoutes);
+router.use('/billing', billingRoutes);
 router.use('/map', mapRoutes);
 router.use('/case-studies', caseStudiesRoutes);
 router.use('/content', contentRoutes);
 router.use('/admin/auth', adminAuthRoutes);
 router.use('/admin/pipeline', adminPipelineRoutes);
 router.use('/admin/case-studies', adminCaseStudiesRoutes);
+router.use('/admin/billing', adminBillingRoutes);
 router.use('/admin', adminReportRequestsRoutes);
 
 export default router;

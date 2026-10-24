@@ -93,6 +93,8 @@ export const prisma = {
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
   },
   subscription: {
     findUnique: vi.fn(),
@@ -101,6 +103,8 @@ export const prisma = {
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
   },
   payment: {
     findUnique: vi.fn(),
@@ -108,6 +112,8 @@ export const prisma = {
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
   },
   alertRule: {
     findUnique: vi.fn(),
@@ -117,22 +123,28 @@ export const prisma = {
     update: vi.fn(),
     delete: vi.fn(),
     count: vi.fn(),
+    upsert: vi.fn(),
   },
   notification: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
   },
   reportDraft: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
   },
   exportLog: {
     create: vi.fn(),
     findMany: vi.fn(),
+    count: vi.fn(),
   },
   $transaction: vi.fn(),
 };

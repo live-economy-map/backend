@@ -78,4 +78,14 @@ describe('env schema validation', () => {
     const result = envSchema.safeParse(incomplete);
     expect(result.success).toBe(false);
   });
+
+  it('provides default values for Chapa configuration when omitted', () => {
+    const result = envSchema.safeParse(validEnv);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.CHAPA_SECRET_KEY).toBe('dev_chapa_secret_key');
+      expect(result.data.CHAPA_WEBHOOK_SECRET).toBe('dev_chapa_webhook_secret');
+      expect(result.data.CHAPA_BASE_URL).toBe('https://api.chapa.co/v1');
+    }
+  });
 });
