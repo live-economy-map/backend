@@ -1,9 +1,12 @@
 import { Request } from 'express';
 
+export type UserRole = 'USER' | 'ADMIN';
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    role: UserRole;
     createdAt: Date | string;
   };
 }

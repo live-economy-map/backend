@@ -14,8 +14,12 @@ export const envSchema = z.object({
   GOOGLE_EARTH_ENGINE_CREDENTIALS: z.string(),
   GDELT_API_KEY: z.string(),
   LLM_API_KEY: z.string(),
+  GROQ_KEY: z.string().optional(),
   ADMIN_SEED_EMAIL: z.string(),
   ADMIN_SEED_PASSWORD: z.string(),
+  CHAPA_SECRET_KEY: z.string().optional(),
+  CHAPA_WEBHOOK_SECRET: z.string().optional(),
+  CHAPA_BASE_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

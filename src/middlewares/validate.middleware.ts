@@ -12,9 +12,16 @@ export const validate = <T>(schema: ZodSchema<T>) => {
         query: req.query,
       });
       const data = parsedData as any;
-      if (data.body) Object.assign(req.body, data.body);
-      if (data.params) Object.assign(req.params, data.params);
-      if (data.query) Object.assign(req.query, data.query);
+      if (data.body !== undefined) Object.assign(req.body, data.body);
+      if (data.params !== undefined) Object.assign(req.params, data.params);
+      if (data.query !== undefined) {
+        Object.defineProperty(req, 'query', {
+          value: data.query,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

@@ -33,6 +33,67 @@ enum EvidenceTier {
   LOCAL_NEWS
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum RequestStatus {
+  SUBMITTED
+  IN_REVIEW
+  IN_PROGRESS
+  DELIVERED
+  REJECTED
+}
+
+enum ContactPreference {
+  EMAIL
+  PHONE
+  TELEGRAM
+}
+
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum DraftStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  DELIVERED
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ApiTier {
+  COMMERCIAL
+  INSTITUTIONAL
+}
+
 // ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
@@ -105,6 +166,9 @@ model GridCell {
   signalValues             SignalValue[]
   compositeScoreSnapshots  CompositeScoreSnapshot[]
   caseStudies              CaseStudy[]
+  savedAreas               SavedArea[]
+  alertRules               AlertRule[]
+  watchlistItems           WatchlistItem[]
 
   @@unique([cellRow, cellCol])
 }
@@ -204,3 +268,326 @@ model CaseStudy {
 
   @@index([isPublished])
 }
+
+// ─────────────────────────────────────────────
+// V2 Models — Identity & Requests
+// ─────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String    // bcrypt hash
+  role             Role      @default(USER)
+  fullName         String?
+  organizationName String?
+  phoneNumber      String?
+  telegramHandle   String?
+  isEmailVerified  Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  emailTokens            EmailToken[]
+  savedAreas             SavedArea[]
+  reportRequests         ReportRequest[]       @relation("UserReportRequests")
+  assignedReportRequests ReportRequest[]       @relation("AdminAssignedRequests")
+  requestEvents          ReportRequestEvent[]  @relation("ActorRequestEvents")
+  uploadedDeliverables   ReportDeliverable[]   @relation("AdminUploadedDeliverables")
+  subscription           Subscription?
+  alertRules             AlertRule[]
+  notifications          Notification[]
+  reviewedDrafts         ReportDraft[]         @relation("AdminReviewedDrafts")
+  orgMemberships         OrgMember[]
+  apiKeys                ApiKey[]
+  watchlists             Watchlist[]
+
+  @@index([role])
+  @@index([isEmailVerified])
+}
+
+model EmailToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  type      TokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tokenHash, type])
+}
+
+model SavedArea {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gridCellId  String
+  gridCell    GridCell @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  customName  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, gridCellId])
+  @@index([userId])
+}
+
+model ReportRequest {
+  id                String            @id @default(uuid())
+  userId            String
+  user              User              @relation("UserReportRequests", fields: [userId], references: [id], onDelete: Restrict)
+  title             String
+  questionPrompt    String
+  areaCellIds       Json              // Array of GridCell UUID strings
+  orgType           String?           // e.g. "Research", "Commercial", "Government", "NGO"
+  contactPreference ContactPreference @default(EMAIL)
+  phoneNumber       String?
+  telegramHandle    String?
+  status            RequestStatus     @default(SUBMITTED)
+  priority          Boolean           @default(false)
+  assignedAdminId   String?
+  assignedAdmin     User?             @relation("AdminAssignedRequests", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  internalNotes     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  events       ReportRequestEvent[]
+  deliverables ReportDeliverable[]
+  drafts       ReportDraft[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedAdminId])
+}
+
+model ReportRequestEvent {
+  id             String         @id @default(uuid())
+  requestId      String
+  request        ReportRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actorId        String
+  actor          User           @relation("ActorRequestEvents", fields: [actorId], references: [id], onDelete: Restrict)
+  previousStatus RequestStatus?
+  newStatus      RequestStatus
+  note           String?
+  createdAt      DateTime       @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model ReportDeliverable {
+  id            String        @id @default(uuid())
+  requestId     String
+  request       ReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl       String
+  fileName      String
+  fileSizeBytes Int
+  mimeType      String
+  uploadedById  String
+  uploadedBy    User          @relation("AdminUploadedDeliverables", fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt     DateTime      @default(now())
+
+  @@index([requestId])
+}
+
+// ─────────────────────────────────────────────
+// V3 Models — Monetization, Alerts & AI Drafts
+// ─────────────────────────────────────────────
+
+model Plan {
+  id              String        @id @default(uuid())
+  name            String        @unique // e.g., "Free", "Analyst Pro", "Enterprise"
+  priceEtb        Int           // Stored in ETB cents (e.g., 50000 = 500.00 ETB)
+  interval        PlanInterval  @default(MONTHLY)
+  canExport       Boolean       @default(false)
+  canAlert        Boolean       @default(false)
+  priorityReports Boolean       @default(false)
+  maxAlerts       Int           @default(0)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status             SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  payments           Payment[]
+  exportLogs         ExportLog[]
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  txRef          String        @unique
+  amountEtb      Int
+  status         PaymentStatus @default(PENDING)
+  rawWebhookJson Json?
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([txRef])
+  @@index([status])
+}
+
+model AlertRule {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gridCellId      String
+  gridCell        GridCell  @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  thresholdDelta  Float     // score delta trigger, e.g. 0.15
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, gridCellId])
+  @@index([isActive])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model ReportDraft {
+  id           String        @id @default(uuid())
+  requestId    String
+  request      ReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  aiModel      String        // e.g. "llama-3.3-70b-versatile"
+  draftContent String        // Markdown generated draft
+  status       DraftStatus   @default(DRAFT)
+  reviewerId   String?
+  reviewer     User?         @relation("AdminReviewedDrafts", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNotes  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model ExportLog {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  format         String       // "CSV" | "JSON"
+  cellCount      Int
+  createdAt      DateTime     @default(now())
+}
+
+// ─────────────────────────────────────────────
+// V4 Models — Organizations, API Platform & Watchlists
+// ─────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    OrgMember[]
+  apiKeys    ApiKey[]
+  watchlists Watchlist[]
+}
+
+model OrgMember {
+  id             String       @id @default(uuid())
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(MEMBER)
+  createdAt      DateTime     @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id           String        @id @default(uuid())
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  keyHash      String        @unique
+  keyPrefix    String
+  tier         ApiTier       @default(COMMERCIAL)
+  rateLimitRpm Int           @default(60)
+  isActive     Boolean       @default(true)
+  lastUsedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+
+  usages       ApiUsage[]
+
+  @@index([keyHash])
+  @@index([userId])
+  @@index([orgId])
+}
+
+model ApiUsage {
+  id             String   @id @default(uuid())
+  apiKeyId       String
+  apiKey         ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  endpoint       String
+  method         String
+  statusCode     Int
+  responseTimeMs Int
+  createdAt      DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+}
+
+model Watchlist {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  items        WatchlistItem[]
+
+  @@index([userId])
+  @@index([orgId])
+}
+
+model WatchlistItem {
+  id          String    @id @default(uuid())
+  watchlistId String
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  gridCellId  String
+  gridCell    GridCell  @relation(fields: [gridCellId], references: [id], onDelete: Restrict)
+  addedAt     DateTime  @default(now())
+  notes       String?
+
+  @@unique([watchlistId, gridCellId])
+  @@index([watchlistId])
+}
+
+

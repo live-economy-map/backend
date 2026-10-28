@@ -15,10 +15,12 @@ import {
   createWeightConfig,
 } from '../controllers/adminPipeline.controller.js';
 
+import { requireRole } from '../middlewares/role.middleware.js';
+
 const router = Router();
 
-// authMiddleware applies to every route in this router (per Doc 8-6).
-router.use(authMiddleware);
+// authMiddleware + requireRole('ADMIN') applies to every route in this router
+router.use(authMiddleware, requireRole('ADMIN'));
 
 router.get('/sources', listSources);
 router.post('/sources/:sourceKey/refresh', validate(refreshParamsSchema), triggerRefresh);

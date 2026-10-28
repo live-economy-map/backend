@@ -20,16 +20,22 @@ vi.mock('../../src/config/db.js', () => ({
 vi.mock('../../src/utils/aiClient.js', () => ({
   generateText: vi.fn(),
   generateStructuredOutput: vi.fn(),
+  generateChatReply: vi.fn(),
 }));
 
 import { prisma } from '../../src/config/db.js';
-import { generateText, generateStructuredOutput } from '../../src/utils/aiClient.js';
+import {
+  generateText,
+  generateStructuredOutput,
+  generateChatReply,
+} from '../../src/utils/aiClient.js';
 import {
   getCompositeScoreLayer,
   getCellDetail,
   generateCellSummary,
   getRawSignalLayer,
   parseNaturalLanguageQuery,
+  chatWithCell,
 } from '../../src/services/map.service.js';
 
 beforeEach(() => {
@@ -616,6 +622,52 @@ describe('map.service', () => {
 
       expect(result.parsedFilters).not.toBeNull();
       expect(result.cells).toEqual([]);
+    });
+  });
+
+  describe('chatWithCell', () => {
+    const cellId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+    it('assembles grounded telemetry and returns AI chat reply', async () => {
+      (prisma.gridCell.findUnique as any).mockResolvedValue({
+        id: cellId,
+        areaLabel: 'Bole Corridor',
+      });
+
+      (prisma.compositeScoreSnapshot.findFirst as any).mockResolvedValue({
+        id: 'snap-1',
+        period: new Date('2026-06-01T00:00:00.000Z'),
+      });
+
+      (prisma.$queryRaw as any)
+        .mockResolvedValueOnce([
+          { period: new Date('2026-06-01T00:00:00.000Z'), compositeScore: 0.85 },
+        ])
+        .mockResolvedValueOnce([
+          { period: new Date('2026-05-01T00:00:00.000Z'), compositeScore: 0.8 },
+        ])
+        .mockResolvedValueOnce([
+          { period: new Date('2026-06-01T00:00:00.000Z'), compositeScore: 0.85 },
+        ]);
+
+      (prisma.signalValue.findMany as any).mockResolvedValue([
+        { dataSource: { key: 'VIIRS' }, rawValue: 14.2, normalizedValue: 0.88 },
+        { dataSource: { key: 'GHSL' }, rawValue: 0.72, normalizedValue: 0.75 },
+      ]);
+
+      (generateChatReply as any).mockResolvedValue(
+        'Bole is exceptionally well-suited for high-density retail.',
+      );
+
+      const result = await chatWithCell(cellId, 'Can I open a supermarket here?');
+
+      expect(generateChatReply).toHaveBeenCalledTimes(1);
+      const messagesArg = (generateChatReply as any).mock.calls[0][0];
+      expect(messagesArg[0].role).toBe('system');
+      expect(messagesArg[0].content).toContain('Bole Corridor');
+      expect(messagesArg[messagesArg.length - 1].content).toBe('Can I open a supermarket here?');
+      expect(result.reply).toBe('Bole is exceptionally well-suited for high-density retail.');
+      expect(result.cellId).toBe(cellId);
     });
   });
 });

@@ -78,4 +78,12 @@ describe('env schema validation', () => {
     const result = envSchema.safeParse(incomplete);
     expect(result.success).toBe(false);
   });
+
+  it('allows Chapa configuration to be omitted without error', () => {
+    const result = envSchema.safeParse(validEnv);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.CHAPA_SECRET_KEY).toBeUndefined();
+    }
+  });
 });

@@ -16,9 +16,13 @@ vi.mock('../../src/controllers/map.controller.js', () => ({
   searchMap: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
   ),
-  // ✅ ADDED: getPeriods controller mock
   getPeriods: vi.fn((req: Request, res: Response) =>
     res.status(200).json({ statusCode: 200, success: true, message: 'OK', data: {} }),
+  ),
+  chatCell: vi.fn((req: Request, res: Response) =>
+    res
+      .status(200)
+      .json({ statusCode: 200, success: true, message: 'AI reply generated', data: {} }),
   ),
 }));
 
@@ -81,11 +85,18 @@ describe('map.routes', () => {
     expect(res.status).toBe(200);
   });
 
-  // ✅ NEW: Test the /periods route
   it('GET /periods has no auth requirement and returns data', async () => {
     const res = await request(buildApp()).get('/map/periods');
     expect(res.status).toBe(200);
     expect(mapController.getPeriods).toHaveBeenCalled();
+  });
+
+  it('POST /cells/:cellId/chat routes to chatCell controller with valid body', async () => {
+    const res = await request(buildApp())
+      .post('/map/cells/123e4567-e89b-12d3-a456-426614174000/chat')
+      .send({ message: 'What is the commercial potential here?' });
+    expect(res.status).toBe(200);
+    expect(mapController.chatCell).toHaveBeenCalled();
   });
 
   it('no route in this router requires auth', async () => {
