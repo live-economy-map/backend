@@ -41,7 +41,7 @@ app.use(
     origin:
       env.NODE_ENV === 'production'
         ? ['https://yourdomain.com', 'https://app.yourdomain.com']
-        : '*',
+        : true,
     credentials: true,
   }),
 );
