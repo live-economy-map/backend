@@ -40,7 +40,13 @@ app.use(
   cors({
     origin:
       env.NODE_ENV === 'production'
-        ? ['https://yourdomain.com', 'https://app.yourdomain.com']
+        ? [
+            ...(env.CLIENT_URL
+              ? env.CLIENT_URL.split(',').map((url) => url.trim().replace(/\/+$/, ''))
+              : []),
+            'https://yourdomain.com',
+            'https://app.yourdomain.com',
+          ].filter(Boolean)
         : true,
     credentials: true,
   }),
