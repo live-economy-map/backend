@@ -26,6 +26,10 @@ export interface CaseStudySummaryDTO {
   longitude: number;
   beforeImageUrl: string | null;
   afterImageUrl: string | null;
+  evidenceTier?: string | null;
+  evidenceDescription?: string | null;
+  scoreRiseDate?: Date;
+  confirmedDate?: Date;
 }
 
 export interface CaseStudyDetailDTO extends CaseStudySummaryDTO {

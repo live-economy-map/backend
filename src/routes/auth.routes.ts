@@ -8,6 +8,7 @@ import {
   verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
 } from '../schemas/auth.schema.js';
 import * as authController from '../controllers/auth.controller.js';
 
@@ -18,6 +19,9 @@ router.post('/register', authLimiter, validate(registerSchema), authController.r
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 router.post('/logout', authMiddleware, authController.logout);
+
+router.get('/me', authMiddleware, authController.getMe);
+router.patch('/me', authMiddleware, validate(updateProfileSchema), authController.patchMe);
 
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 router.get('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
